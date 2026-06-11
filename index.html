@@ -848,37 +848,67 @@
         }
 
         // --- ACTIVE APP SYNC TRIGGERS ---
-        function triggerActiveAppLoad() {
+        async function triggerActiveAppLoad() {
             try {
+                let success = false;
                 if (activeTab === 'work') {
                     const frame = document.getElementById("frame-work").contentWindow;
-                    if (frame && typeof frame.fetchData === 'function') frame.fetchData();
+                    if (frame && typeof frame.fetchData === 'function') {
+                        await frame.fetchData();
+                        success = true;
+                    }
                 } else if (activeTab === 'friend') {
                     const frame = document.getElementById("frame-friend").contentWindow;
-                    if (frame && typeof frame.loadFromCloud === 'function') frame.loadFromCloud();
+                    if (frame && typeof frame.loadFromCloud === 'function') {
+                        await frame.loadFromCloud();
+                        success = true;
+                    }
                 } else if (activeTab === 'food') {
                     const frame = document.getElementById("frame-food").contentWindow;
-                    if (frame && typeof frame.syncDown === 'function') frame.syncDown();
+                    if (frame && typeof frame.syncDown === 'function') {
+                        await frame.syncDown();
+                        success = true;
+                    }
+                }
+                
+                if (success) {
+                    alert(`${activeTab.charAt(0).toUpperCase() + activeTab.slice(1)} data loaded from cloud successfully!`);
                 }
             } catch (e) {
                 console.error("Failed to trigger load for active app", e);
+                alert("Load failed! Please check your connection and configuration.");
             }
         }
 
-        function triggerActiveAppSave() {
+        async function triggerActiveAppSave() {
             try {
+                let success = false;
                 if (activeTab === 'work') {
                     const frame = document.getElementById("frame-work").contentWindow;
-                    if (frame && typeof frame.syncData === 'function') frame.syncData();
+                    if (frame && typeof frame.syncData === 'function') {
+                        await frame.syncData();
+                        success = true;
+                    }
                 } else if (activeTab === 'friend') {
                     const frame = document.getElementById("frame-friend").contentWindow;
-                    if (frame && typeof frame.saveToCloud === 'function') frame.saveToCloud();
+                    if (frame && typeof frame.saveToCloud === 'function') {
+                        await frame.saveToCloud();
+                        success = true;
+                    }
                 } else if (activeTab === 'food') {
                     const frame = document.getElementById("frame-food").contentWindow;
-                    if (frame && typeof frame.syncUp === 'function') frame.syncUp();
+                    if (frame && typeof frame.syncUp === 'function') {
+                        await frame.syncUp();
+                        success = true;
+                    }
+                }
+                
+                if (success) {
+                    alert(`${activeTab.charAt(0).toUpperCase() + activeTab.slice(1)} data saved to cloud successfully!`);
                 }
             } catch (e) {
                 console.error("Failed to trigger save for active app", e);
+                alert("Save failed! Please check your connection and configuration.");
             }
         }
 
