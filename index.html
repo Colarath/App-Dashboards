@@ -314,7 +314,15 @@
                 </div>
             </div>
             <div class="d-flex align-items-center gap-2">
-                <button class="btn btn-outline-primary btn-sm" onclick="syncAll()">
+                <!-- Dynamic App Sync Buttons -->
+                <button id="btn-app-load" class="btn btn-outline-primary btn-sm" style="display: none;" onclick="triggerActiveAppLoad()">
+                    <i class="fas fa-cloud-download-alt"></i> Load Data
+                </button>
+                <button id="btn-app-save" class="btn btn-primary btn-sm" style="display: none;" onclick="triggerActiveAppSave()">
+                    <i class="fas fa-cloud-upload-alt"></i> Save Data
+                </button>
+
+                <button id="btn-sync-all" class="btn btn-outline-primary btn-sm" onclick="syncAll()">
                     <i class="fas fa-sync-alt"></i> Sync All
                 </button>
                 <button class="btn btn-outline-secondary btn-sm" onclick="openSettingsModal()">
@@ -474,8 +482,12 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
     <script>
+        let activeTab = 'home';
+
         // --- TAB SWITCHING ---
         function switchTab(tabName) {
+            activeTab = tabName;
+
             // Remove active status from sidebar links
             document.querySelectorAll('.sidebar-menu .menu-item').forEach(item => item.classList.remove('active'));
             
@@ -484,21 +496,49 @@
             document.getElementById('view-home').classList.add('hidden');
 
             const tabTitle = document.getElementById('current-tab-title');
+            
+            // Dynamic Header Buttons
+            const loadBtn = document.getElementById('btn-app-load');
+            const saveBtn = document.getElementById('btn-app-save');
+            const syncAllBtn = document.getElementById('btn-sync-all');
 
             if (tabName === 'home') {
                 document.getElementById('menu-home').classList.add('active');
                 document.getElementById('view-home').classList.remove('hidden');
                 tabTitle.innerText = "Dashboard Overview";
+                
+                loadBtn.style.display = 'none';
+                saveBtn.style.display = 'none';
+                syncAllBtn.style.display = 'inline-block';
+
                 loadDashboardWidgets(); // Reload widgets on return
             } else {
                 document.getElementById(`menu-${tabName}`).classList.add('active');
                 const frame = document.getElementById(`frame-${tabName}`);
                 frame.classList.add('active');
                 
-                // Format Title
-                if (tabName === 'work') tabTitle.innerText = "Work Hour Tracker";
-                if (tabName === 'friend') tabTitle.innerText = "Friend Tracker";
-                if (tabName === 'food') tabTitle.innerText = "Food Prep Tracker";
+                loadBtn.style.display = 'inline-block';
+                saveBtn.style.display = 'inline-block';
+                syncAllBtn.style.display = 'none';
+                
+                // Format Title & dynamic labels
+                if (tabName === 'work') {
+                    tabTitle.innerText = "Work Hour Tracker";
+                    loadBtn.innerHTML = '<i class="fas fa-cloud-download-alt"></i> Load Work';
+                    saveBtn.innerHTML = '<i class="fas fa-cloud-upload-alt"></i> Save Work';
+                }
+                if (tabName === 'friend') {
+                    tabTitle.innerText = "Friend Tracker";
+                    loadBtn.innerHTML = '<i class="fas fa-cloud-download-alt"></i> Load Friends';
+                    saveBtn.innerHTML = '<i class="fas fa-cloud-upload-alt"></i> Save Friends';
+                }
+                if (tabName === 'food') {
+                    tabTitle.innerText = "Food Prep Tracker";
+                    loadBtn.innerHTML = '<i class="fas fa-cloud-download-alt"></i> Load Food';
+                    saveBtn.innerHTML = '<i class="fas fa-cloud-upload-alt"></i> Save Food';
+                }
+                
+                updateParentSaveButtonState();
             }
 
             // Close sidebar on mobile
@@ -807,12 +847,78 @@
             }
         }
 
+        // --- ACTIVE APP SYNC TRIGGERS ---
+        function triggerActiveAppLoad() {
+            try {
+                if (activeTab === 'work') {
+                    const frame = document.getElementById("frame-work").contentWindow;
+                    if (frame && typeof frame.fetchData === 'function') frame.fetchData();
+                } else if (activeTab === 'friend') {
+                    const frame = document.getElementById("frame-friend").contentWindow;
+                    if (frame && typeof frame.loadFromCloud === 'function') frame.loadFromCloud();
+                } else if (activeTab === 'food') {
+                    const frame = document.getElementById("frame-food").contentWindow;
+                    if (frame && typeof frame.syncDown === 'function') frame.syncDown();
+                }
+            } catch (e) {
+                console.error("Failed to trigger load for active app", e);
+            }
+        }
+
+        function triggerActiveAppSave() {
+            try {
+                if (activeTab === 'work') {
+                    const frame = document.getElementById("frame-work").contentWindow;
+                    if (frame && typeof frame.syncData === 'function') frame.syncData();
+                } else if (activeTab === 'friend') {
+                    const frame = document.getElementById("frame-friend").contentWindow;
+                    if (frame && typeof frame.saveToCloud === 'function') frame.saveToCloud();
+                } else if (activeTab === 'food') {
+                    const frame = document.getElementById("frame-food").contentWindow;
+                    if (frame && typeof frame.syncUp === 'function') frame.syncUp();
+                }
+            } catch (e) {
+                console.error("Failed to trigger save for active app", e);
+            }
+        }
+
+        function updateParentSaveButtonState() {
+            const saveBtn = document.getElementById('btn-app-save');
+            if (!saveBtn || saveBtn.style.display === 'none') return;
+            
+            try {
+                let hasUnsaved = false;
+                if (activeTab === 'work') {
+                    const frame = document.getElementById("frame-work").contentWindow;
+                    if (frame) hasUnsaved = frame.hasUnsavedChanges;
+                } else if (activeTab === 'friend') {
+                    const frame = document.getElementById("frame-friend").contentWindow;
+                    if (frame) hasUnsaved = frame.hasUnsavedChanges;
+                }
+
+                if (hasUnsaved) {
+                    saveBtn.classList.remove('btn-primary');
+                    saveBtn.classList.add('btn-warning');
+                    saveBtn.innerHTML = `<i class="fas fa-exclamation-triangle"></i> Save ${activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}`;
+                } else {
+                    saveBtn.classList.remove('btn-warning');
+                    saveBtn.classList.add('btn-primary');
+                    saveBtn.innerHTML = `<i class="fas fa-cloud-upload-alt"></i> Save ${activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}`;
+                }
+            } catch (e) {
+                // Ignore cross-origin error
+            }
+        }
+
         // --- STARTUP ---
         window.addEventListener('load', () => {
             loadDashboardWidgets();
             
-            // Periodically refresh widgets in background to capture iframe state changes
-            setInterval(loadDashboardWidgets, 3000);
+            // Periodically refresh widgets and unsaved status in background
+            setInterval(() => {
+                loadDashboardWidgets();
+                updateParentSaveButtonState();
+            }, 3000);
         });
     </script>
 </body>
