@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UK Food Prep Tracker</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { background-color: #f0f2f5; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .main-container { max-width: 700px; margin: 30px auto; }
+        .card { border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border: none; margin-bottom: 20px; }
+        
+        .food-item { 
+            border: 1px solid rgba(0, 0, 0, 0.08); 
+            border-left-width: 6px !important;
+            margin-bottom: 12px; 
+            border-radius: 10px;
+            overflow: hidden;
+            transition: all 0.2s ease;
+        }
+        
+        .food-item.completed { 
+            border-left-color: #198754 !important; 
+            background-color: #f8fff9; 
+        }
+        
+        .food-item.empty { 
+            border-left-color: #dc3545 !important; 
+        }
+        
+        .food-item.in-progress { 
+            border-left-color: #0d6efd !important; 
+        }
+
+        .run-out-date {
+            color: #fd7e14;
+            font-weight: 600;
+        }
+
+        .monospace { font-family: monospace; }
+        
+        /* IFrame Embedded Styles */
+        body.embedded { background-color: transparent; }
+        body.embedded .main-container { margin: 15px auto; }
+        body.embedded #header-row { display: none !important; }
+        body.embedded #toolbar-card { display: none !important; }
+    </style>
+</head>
+<body>
+
+<div class="container main-container">
+    <div id="header-row" class="d-flex justify-content-between align-items-center mb-4">
+        <h3 class="m-0"><i class="fas fa-utensils text-primary"></i> Food Prep Tracker</h3>
+        <div>
+            <button class="btn btn-outline-danger btn-sm me-1" onclick="resetWeek()">
+                <i class="fas fa-redo"></i> Reset Week
+            </button>
+            <button class="btn btn-outline-secondary btn-sm" onclick="toggleSettings()">
+                <i class="fas fa-cog"></i> Settings
+            </button>
+        </div>
+    </div>
+
+    <!-- TOOLBAR (Hidden when embedded) -->
+    <div id="toolbar-card" class="card p-3 mb-3">
+        <div class="d-flex gap-2 justify-content-between align-items-center">
+            <div class="text-muted small">
+                <i class="fas fa-info-circle"></i> Sync weekly meal prep to save API requests.
+            </div>
+            <div>
+                <button class="btn btn-outline-primary btn-sm" onclick="syncDown()">
+                    <i class="fas fa-cloud-download-alt"></i> Load
+                </button>
+                <button class="btn btn-primary btn-sm" onclick="syncUp()">
+                    <i class="fas fa-cloud-upload-alt"></i> Save
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- STATUS MESSAGE -->
+    <div id="status-msg" class="text-center fw-bold mb-3 small" style="height: 20px;"></div>
+
+    <!-- SETTINGS PANEL -->
+    <div id="settings-panel" class="card p-4 mb-3" style="display: none;">
+        <h5>JSONBin Configuration</h5>
+        <hr class="mt-1">
+        <div class="mb-3">
+            <label class="form-label">Master API Key (X-Master-Key)</label>
+            <input type="password" id="api-key" class="form-control" placeholder="Paste your API Key here">
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Bin ID</label>
+            <input type="text" id="bin-id" class="form-control" placeholder="Paste your Bin ID here">
+        </div>
+        <button class="btn btn-success w-100" onclick="saveSettings()">Save Configuration</button>
+    </div>
+
+    <!-- INPUT PANEL -->
+    <div class="card p-4">
+        <div class="row g-2">
+            <div class="col-7 col-sm-8">
+                <input type="text" id="food-input" class="form-control" placeholder="Item Name (e.g. Chicken)">
+            </div>
+            <div class="col-2 col-sm-2">
+                <input type="number" id="target-input" class="form-control text-center" value="5" min="1" placeholder="Goal">
+            </div>
+            <div class="col-3 col-sm-2 d-grid">
+                <button id="add-btn" class="btn btn-primary" onclick="addItem()">Add</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- PREP LIST -->
+    <div id="prep-list-container">
+        <ul id="prep-list" class="list-unstyled"></ul>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+    // State
+    let prepItems = JSON.parse(localStorage.getItem('prepItems')) || [];
+    
+    // DOM Elements
+    const list = document.getElementById('prep-list');
+    const input = document.getElementById('food-input');
+    const targetInput = document.getElementById('target-input');
+    const settingsPanel = document.getElementById('settings-panel');
+    const statusMsg = document.getElementById('status-msg');
+    
+    // Settings Inputs
+    const apiKeyInput = document.getElementById('api-key');
+    const binIdInput = document.getElementById('bin-id');
+
+    // --- INITIALIZATION ---
+    document.addEventListener("DOMContentLoaded", () => {
+        // Embed detection
+        if (window.self !== window.top) {
+            document.body.classList.add('embedded');
+        }
+
+        loadSettings();
+        renderList();
+
+        const key = localStorage.getItem('jsonbin_key');
+        const binId = localStorage.getItem('jsonbin_id');
+
+        if (key && binId) {
+            syncDown(); // Automatically download on start if configured
+        } else {
+            // Auto open settings if not embedded and missing keys
+            if (window.self === window.top) {
+                toggleSettings();
+            }
+        }
+    });
+
+    // Load Settings on Start
+    function loadSettings() {
+        apiKeyInput.value = localStorage.getItem('jsonbin_key') || '';
+        binIdInput.value = localStorage.getItem('jsonbin_id') || '';
+    }
+
+    // --- CORE FUNCTIONS ---
+
+    // Helper: Calculate Date based on count (1 item = 1 day)
+    function getRunOutDate(daysLeft) {
+        if (daysLeft <= 0) return "Out of stock";
+        
+        const date = new Date();
+        // Add days to current date
+        date.setDate(date.getDate() + daysLeft);
+        
+        // Format for UK: "Mon 10 Feb"
+        const options = { weekday: 'short', day: 'numeric', month: 'short' };
+        return "Lasts until: " + date.toLocaleDateString('en-GB', options);
+    }
+
+    function renderList() {
+        list.innerHTML = '';
+        prepItems.forEach((item, index) => {
+            const target = item.target || 5;
+            const isComplete = item.count >= target;
+            const isEmpty = item.count === 0;
+
+            // Determine styling class
+            let cssClass = 'food-item card p-3';
+            if (isComplete) {
+                cssClass += ' completed';
+            } else if (isEmpty) {
+                cssClass += ' empty';
+            } else {
+                cssClass += ' in-progress';
+            }
+
+            const li = document.createElement('li');
+            li.className = cssClass;
+            
+            li.innerHTML = `
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <h5 class="mb-1 text-capitalize fw-bold text-dark">${item.name}</h5>
+                        <div class="text-muted small">
+                            <span class="me-3">Goal: ${target}</span>
+                            <span class="run-out-date"><i class="far fa-calendar-alt"></i> ${getRunOutDate(item.count)}</span>
+                        </div>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <button class="btn btn-outline-danger btn-sm px-2" onclick="changeCount(${index}, -1)">
+                            <i class="fas fa-minus"></i>
+                        </button>
+                        
+                        <span class="fs-5 fw-bold monospace mx-1" style="min-width: 45px; text-align: center; color: ${isComplete ? '#198754' : '#212529'}">
+                            ${item.count}/${target}
+                        </span>
+
+                        <button class="btn btn-outline-success btn-sm px-2" onclick="changeCount(${index}, 1)">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                        
+                        <button class="btn btn-link text-muted p-0 ms-2" onclick="deleteItem(${index})">
+                            <i class="fas fa-trash-alt"></i>
+                        </button>
+                    </div>
+                </div>
+            `;
+            list.appendChild(li);
+        });
+        localStorage.setItem('prepItems', JSON.stringify(prepItems));
+    }
+
+    function addItem() {
+        const name = input.value.trim();
+        const target = parseInt(targetInput.value) || 5;
+
+        if (name === '') return;
+
+        prepItems.push({ 
+            name: name, 
+            count: 0,
+            target: target 
+        });
+        
+        renderList();
+        input.value = '';
+        targetInput.value = '5';
+    }
+
+    function changeCount(index, change) {
+        if (prepItems[index].count + change >= 0) {
+            prepItems[index].count += change;
+            renderList();
+        }
+    }
+
+    function resetWeek() {
+        if(confirm("Start a new week? This will set all counts to 0.")) {
+            prepItems.forEach(item => {
+                item.count = 0;
+            });
+            renderList();
+            setStatus("New week started!", "#0d6efd");
+        }
+    }
+
+    function deleteItem(index) {
+        if (confirm(`Delete ${prepItems[index].name}?`)) {
+            prepItems.splice(index, 1);
+            renderList();
+        }
+    }
+
+    // --- CLOUD SYNC FUNCTIONS (JSONBIN) ---
+
+    function toggleSettings() {
+        const isHidden = settingsPanel.style.display === 'none';
+        settingsPanel.style.display = isHidden ? 'block' : 'none';
+    }
+
+    function saveSettings() {
+        localStorage.setItem('jsonbin_key', apiKeyInput.value.trim());
+        localStorage.setItem('jsonbin_id', binIdInput.value.trim());
+        setStatus('Configuration saved!', '#198754');
+        toggleSettings();
+        syncDown(); // Fetch with new config
+    }
+
+    async function syncUp() {
+        // Refresh keys
+        const key = localStorage.getItem('jsonbin_key');
+        const binId = localStorage.getItem('jsonbin_id');
+
+        if (!key || !binId) {
+            setStatus('Error: Configure Settings first.', '#dc3545');
+            return;
+        }
+
+        setStatus('Syncing up to cloud...', '#0dcaf0');
+
+        try {
+            const payload = {
+                items: prepItems,
+                lastUpdated: new Date().toLocaleString('en-GB')
+            };
+
+            const response = await fetch(`https://api.jsonbin.io/v3/b/${binId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Master-Key': key
+                },
+                body: JSON.stringify(payload)
+            });
+
+            if (response.ok) {
+                setStatus('Successfully saved to cloud!', '#198754');
+            } else {
+                setStatus('Error saving. Check settings.', '#dc3545');
+            }
+        } catch (error) {
+            setStatus('Network error.', '#dc3545');
+        }
+    }
+
+    async function syncDown() {
+        const key = localStorage.getItem('jsonbin_key');
+        const binId = localStorage.getItem('jsonbin_id');
+
+        if (!key || !binId) {
+            if (window.self === window.top) {
+                setStatus('Error: Configure Settings first.', '#dc3545');
+            }
+            return;
+        }
+
+        setStatus('Loading from cloud...', '#0dcaf0');
+
+        try {
+            const response = await fetch(`https://api.jsonbin.io/v3/b/${binId}`, {
+                method: 'GET',
+                headers: { 'X-Master-Key': key }
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                
+                let newItems = [];
+                if (data.record && data.record.items) {
+                    newItems = data.record.items;
+                } else if (data.record && Array.isArray(data.record)) {
+                    newItems = data.record;
+                }
+
+                if (newItems) {
+                    prepItems = newItems;
+                    renderList();
+                    setStatus('List loaded successfully!', '#198754');
+                }
+            } else {
+                setStatus('Error loading. Check settings.', '#dc3545');
+            }
+        } catch (error) {
+            setStatus('Network error.', '#dc3545');
+        }
+    }
+
+    function setStatus(msg, color) {
+        statusMsg.textContent = msg;
+        statusMsg.style.color = color;
+        setTimeout(() => { statusMsg.textContent = ''; }, 3000);
+    }
+
+    input.addEventListener('keypress', function (e) {
+        if (e.key === 'Enter') {
+            addItem();
+        }
+    });
+
+</script>
+</body>
+</html>

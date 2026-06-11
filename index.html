@@ -3,92 +3,139 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Personal Suite</title>
+    <title>Personal Suite Dashboard</title>
+    <!-- Google Fonts & Bootstrap 5 & Font Awesome 6 -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
     <style>
-        /* --- SHELL STYLING --- */
+        :root {
+            --sidebar-width: 260px;
+            --primary-bg: #f0f2f5;
+        }
+
         body {
-            margin: 0;
-            padding: 0;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background-color: #121212; /* Dark background for the OS shell */
+            font-family: 'Outfit', sans-serif;
+            background-color: var(--primary-bg);
             height: 100vh;
+            margin: 0;
+            overflow: hidden;
+            display: flex;
+        }
+
+        /* --- SIDEBAR --- */
+        .sidebar {
+            width: var(--sidebar-width);
+            background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
+            color: #fff;
+            height: 100vh;
+            position: fixed;
+            left: 0;
+            top: 0;
             display: flex;
             flex-direction: column;
-            overflow: hidden; /* Prevents double scrollbars */
+            box-shadow: 4px 0 10px rgba(0, 0, 0, 0.15);
+            z-index: 1000;
+            transition: transform 0.3s ease;
         }
 
-        /* --- NAVIGATION BAR --- */
-        .navbar {
-            background-color: #1e1e1e;
-            border-bottom: 1px solid #333;
-            padding: 0 10px;
-            height: 50px;
+        .sidebar-brand {
+            padding: 24px 20px;
+            font-size: 1.35rem;
+            font-weight: 700;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
             display: flex;
             align-items: center;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-            flex-shrink: 0;
-            gap: 10px;
+            gap: 12px;
+            background: rgba(0, 0, 0, 0.1);
         }
 
-        .nav-brand {
-            color: #fff;
-            font-weight: bold;
-            font-size: 1.1rem;
-            margin-right: 20px;
-            padding-left: 10px;
-            display: flex;
-            align-items: center;
+        .sidebar-brand span {
+            background: linear-gradient(45deg, #3b82f6, #06b6d4);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
         }
 
-        .nav-tabs {
+        .sidebar-menu {
+            list-style: none;
+            padding: 20px 10px;
+            margin: 0;
+            flex-grow: 1;
             display: flex;
-            height: 100%;
-            gap: 5px;
-        }
-
-        .tab-btn {
-            background: none;
-            border: none;
-            color: #888;
-            padding: 0 20px;
-            height: 100%;
-            cursor: pointer;
-            font-size: 0.9rem;
-            transition: all 0.2s;
-            position: relative;
-            display: flex;
-            align-items: center;
+            flex-direction: column;
             gap: 8px;
         }
 
-        .tab-btn:hover {
-            color: #ddd;
-            background-color: #2a2a2a;
-        }
-
-        .tab-btn.active {
-            color: #fff;
-            background-color: #252525;
+        .menu-item a {
+            color: #94a3b8;
+            text-decoration: none;
+            padding: 12px 16px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
             font-weight: 500;
+            transition: all 0.2s ease;
         }
 
-        /* Active tab underline indicator */
-        .tab-btn.active::after {
-            content: '';
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            width: 100%;
-            height: 3px;
-            background-color: #0d6efd; /* Bootstrap Blue */
+        .menu-item a:hover {
+            background-color: rgba(255, 255, 255, 0.05);
+            color: #fff;
         }
 
-        /* --- APP WINDOW --- */
-        .app-container {
+        .menu-item.active a {
+            background: linear-gradient(90deg, #2563eb 0%, #1d4ed8 100%);
+            color: #fff;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+        }
+
+        .sidebar-footer {
+            padding: 15px 20px;
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+            font-size: 0.85rem;
+            color: #64748b;
+            text-align: center;
+        }
+
+        /* --- CONTENT AREA --- */
+        .main-content {
+            margin-left: var(--sidebar-width);
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            position: relative;
+            transition: margin-left 0.3s ease;
+        }
+
+        /* --- HEADER --- */
+        .top-header {
+            height: 70px;
+            background-color: #fff;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+            padding: 0 30px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-shrink: 0;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+            z-index: 100;
+        }
+
+        .header-title h4 {
+            margin: 0;
+            font-weight: 600;
+            color: #1e293b;
+        }
+
+        /* --- APP VIEW CONTAINER --- */
+        .view-container {
             flex-grow: 1;
             position: relative;
-            width: 100%;
-            background-color: #f0f2f5;
+            background-color: var(--primary-bg);
+            overflow-y: auto;
+            padding: 30px;
         }
 
         iframe {
@@ -98,9 +145,7 @@
             position: absolute;
             top: 0;
             left: 0;
-            /* We use visibility:hidden to keep the app running in the background 
-               so you don't lose unsaved data when switching tabs */
-            visibility: hidden; 
+            visibility: hidden;
             z-index: 0;
         }
 
@@ -108,61 +153,667 @@
             visibility: visible;
             z-index: 1;
         }
+
+        /* --- DASHBOARD HOME STYLING --- */
+        .dashboard-home {
+            display: block;
+        }
+        
+        .dashboard-home.hidden {
+            display: none;
+        }
+
+        .stat-card {
+            background-color: #fff;
+            border-radius: 16px;
+            padding: 24px;
+            border: 1px solid rgba(0, 0, 0, 0.05);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.02);
+            transition: transform 0.2s, box-shadow 0.2s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+        }
+
+        .stat-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            margin-bottom: 15px;
+        }
+
+        .bg-blue-light { background-color: #eff6ff; color: #3b82f6; }
+        .bg-green-light { background-color: #f0fdf4; color: #22c55e; }
+        .bg-orange-light { background-color: #fff7ed; color: #f97316; }
+
+        .stat-value {
+            font-size: 2.2rem;
+            font-weight: 700;
+            line-height: 1.2;
+            color: #0f172a;
+        }
+
+        .stat-label {
+            color: #64748b;
+            font-size: 0.95rem;
+            font-weight: 500;
+        }
+
+        .widget-card {
+            background-color: #fff;
+            border-radius: 16px;
+            border: 1px solid rgba(0, 0, 0, 0.05);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.02);
+            height: 100%;
+        }
+
+        .widget-header {
+            padding: 20px 24px;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .widget-header h5 {
+            margin: 0;
+            font-weight: 600;
+            color: #1e293b;
+        }
+
+        .widget-body {
+            padding: 24px;
+        }
+
+        .monospace { font-family: monospace; }
+
+        /* Mobile Hamburger */
+        .mobile-toggle {
+            display: none;
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            color: #1e293b;
+            cursor: pointer;
+        }
+
+        /* --- RESPONSIVENESS --- */
+        @media (max-width: 991px) {
+            .sidebar {
+                transform: translateX(-100%);
+            }
+            .sidebar.show {
+                transform: translateX(0);
+            }
+            .main-content {
+                margin-left: 0;
+            }
+            .mobile-toggle {
+                display: block;
+            }
+        }
     </style>
 </head>
 <body>
 
-    <nav class="navbar">
-        <div class="nav-brand">
-            <span>🚀 Dashboard</span>
+    <!-- SIDEBAR -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-brand">
+            <i class="fas fa-cubes text-primary fs-3"></i>
+            <span>Personal Suite</span>
         </div>
-        <div class="nav-tabs">
-            <button class="tab-btn active" onclick="switchTab('friends', this)">
-                <span>👥 Friends</span>
-            </button>
+        <ul class="sidebar-menu">
+            <li class="menu-item active" id="menu-home">
+                <a href="#" onclick="switchTab('home')">
+                    <i class="fas fa-home"></i>
+                    <span>Dashboard Home</span>
+                </a>
+            </li>
+            <li class="menu-item" id="menu-work">
+                <a href="#" onclick="switchTab('work')">
+                    <i class="fas fa-clock"></i>
+                    <span>Work Tracker</span>
+                </a>
+            </li>
+            <li class="menu-item" id="menu-friend">
+                <a href="#" onclick="switchTab('friend')">
+                    <i class="fas fa-users"></i>
+                    <span>Friend Tracker</span>
+                </a>
+            </li>
+            <li class="menu-item" id="menu-food">
+                <a href="#" onclick="switchTab('food')">
+                    <i class="fas fa-utensils"></i>
+                    <span>Food Prep Tracker</span>
+                </a>
+            </li>
+        </ul>
+        <div class="sidebar-footer">
+            <span>v1.0.0 &copy; 2026</span>
+        </div>
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <main class="main-content">
+        <!-- HEADER -->
+        <header class="top-header">
+            <div class="d-flex align-items-center gap-3">
+                <button class="mobile-toggle" onclick="toggleSidebar()">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <div class="header-title">
+                    <h4 id="current-tab-title">Dashboard Overview</h4>
+                </div>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <button class="btn btn-outline-primary btn-sm" onclick="syncAll()">
+                    <i class="fas fa-sync-alt"></i> Sync All
+                </button>
+                <button class="btn btn-outline-secondary btn-sm" onclick="openSettingsModal()">
+                    <i class="fas fa-cog"></i> Settings
+                </button>
+            </div>
+        </header>
+
+        <!-- VIEW CONTAINER -->
+        <div class="view-container">
             
-            <button class="tab-btn" onclick="switchTab('work', this)">
-                <span>💼 Work</span>
-            </button>
+            <!-- DASHBOARD HOME VIEW -->
+            <div id="view-home" class="dashboard-home">
+                
+                <!-- STAT CARDS ROW -->
+                <div class="row g-4 mb-4">
+                    <div class="col-12 col-md-4">
+                        <div class="stat-card">
+                            <div class="stat-icon bg-blue-light">
+                                <i class="fas fa-business-time"></i>
+                            </div>
+                            <div class="stat-value text-muted" id="stat-work-balance">--</div>
+                            <div class="stat-label">Work Hour Balance</div>
+                        </div>
+                    </div>
+                    <div class="col-12 col-md-4">
+                        <div class="stat-card">
+                            <div class="stat-icon bg-green-light">
+                                <i class="fas fa-user-friends"></i>
+                            </div>
+                            <div class="stat-value" id="stat-friends-count">0</div>
+                            <div class="stat-label">Friends Tracked</div>
+                        </div>
+                    </div>
+                    <div class="col-12 col-md-4">
+                        <div class="stat-card">
+                            <div class="stat-icon bg-orange-light">
+                                <i class="fas fa-utensils"></i>
+                            </div>
+                            <div class="stat-value" id="stat-food-count">0/0</div>
+                            <div class="stat-label">Meal Prep Completed</div>
+                        </div>
+                    </div>
+                </div>
 
-            <button class="tab-btn" onclick="switchTab('food', this)">
-                <span>🍔 Food</span>
-            </button>
+                <!-- WIDGETS ROW -->
+                <div class="row g-4">
+                    <!-- WORK ENTRY WIDGET -->
+                    <div class="col-12 col-lg-6">
+                        <div class="widget-card">
+                            <div class="widget-header">
+                                <h5><i class="fas fa-clock text-primary me-2"></i> Recent Work Entries</h5>
+                                <button class="btn btn-link btn-sm text-decoration-none" onclick="switchTab('work')">View All</button>
+                            </div>
+                            <div class="widget-body">
+                                <div id="widget-work-list" class="list-group list-group-flush">
+                                    <!-- Populated dynamically -->
+                                    <div class="text-center text-muted py-3">No work data found.</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- FRIEND ALERT WIDGET -->
+                    <div class="col-12 col-lg-6">
+                        <div class="widget-card">
+                            <div class="widget-header">
+                                <h5><i class="fas fa-exclamation-circle text-warning me-2"></i> Friends Needing Contact</h5>
+                                <button class="btn btn-link btn-sm text-decoration-none" onclick="switchTab('friend')">View All</button>
+                            </div>
+                            <div class="widget-body">
+                                <div id="widget-friends-list" class="list-group list-group-flush">
+                                    <!-- Populated dynamically -->
+                                    <div class="text-center text-muted py-3">No friends needing contact!</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- FOOD PREP QUICK WIDGET -->
+                    <div class="col-12 col-lg-6">
+                        <div class="widget-card">
+                            <div class="widget-header">
+                                <h5><i class="fas fa-hamburger text-success me-2"></i> Food Stock Quick Update</h5>
+                                <button class="btn btn-link btn-sm text-decoration-none" onclick="switchTab('food')">View All</button>
+                            </div>
+                            <div class="widget-body">
+                                <div id="widget-food-list" class="list-group list-group-flush">
+                                    <!-- Populated dynamically -->
+                                    <div class="text-center text-muted py-3">No food items tracked.</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- EMBEDDED IFRAMES -->
+            <iframe id="frame-work" src="work-tracker/index.html"></iframe>
+            <iframe id="frame-friend" src="friend-tracker/index.html"></iframe>
+            <iframe id="frame-food" src="food-tracker/index.html"></iframe>
+
         </div>
-    </nav>
+    </main>
 
-    <div class="app-container">
-        
-        <iframe id="frame-friends" class="active" 
-            src="https://colarath.github.io/Friend-Tracker/">
-        </iframe>
+    <!-- UNIFIED SETTINGS MODAL -->
+    <div id="settingsModal" class="modal fade" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">⚙️ Unified Dashboard Configuration</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="small text-muted">Configure your JSONBin API key and Bin IDs once to synchronize all trackers.</p>
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Master API Key (X-Master-Key)</label>
+                        <input type="password" id="settings-apiKey" class="form-control" placeholder="X-Master-Key from jsonbin.io">
+                    </div>
+                    
+                    <hr>
+                    <h6 class="fw-bold text-primary mb-2">Work Tracker Settings</h6>
+                    <div class="mb-3">
+                        <label class="form-label">Bin ID</label>
+                        <input type="text" id="settings-workBinId" class="form-control" placeholder="Work Tracker Bin ID">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Standard Daily Hours (Mon-Fri)</label>
+                        <input type="number" id="settings-workHours" class="form-control" step="0.5" placeholder="8.0">
+                    </div>
 
-        <iframe id="frame-work" 
-            src="https://colarath.github.io/work-tracker/">
-        </iframe>
+                    <hr>
+                    <h6 class="fw-bold text-success mb-2">Friend Tracker Settings</h6>
+                    <div class="mb-3">
+                        <label class="form-label">Bin ID</label>
+                        <input type="text" id="settings-friendBinId" class="form-control" placeholder="Friend Tracker Bin ID">
+                    </div>
 
-        <iframe id="frame-food" 
-            src="https://colarath.github.io/food-tracker/">
-        </iframe>
-
+                    <hr>
+                    <h6 class="fw-bold text-orange mb-2">Food Prep Tracker Settings</h6>
+                    <div class="mb-3">
+                        <label class="form-label">Bin ID</label>
+                        <input type="text" id="settings-foodBinId" class="form-control" placeholder="Food Tracker Bin ID">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="saveSettings()">Save Configuration</button>
+                </div>
+            </div>
+        </div>
     </div>
 
+    <!-- BOOTSTRAP JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
     <script>
-        function switchTab(appName, buttonElement) {
-            // 1. Remove 'active' class from all buttons and iframes
-            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+        // --- TAB SWITCHING ---
+        function switchTab(tabName) {
+            // Remove active status from sidebar links
+            document.querySelectorAll('.sidebar-menu .menu-item').forEach(item => item.classList.remove('active'));
+            
+            // Deactivate all iframes and home view
             document.querySelectorAll('iframe').forEach(frame => frame.classList.remove('active'));
+            document.getElementById('view-home').classList.add('hidden');
 
-            // 2. Add 'active' class to the clicked button
-            buttonElement.classList.add('active');
+            const tabTitle = document.getElementById('current-tab-title');
 
-            // 3. Find and activate the corresponding iframe
-            const targetFrame = document.getElementById(`frame-${appName}`);
-            if (targetFrame) {
-                targetFrame.classList.add('active');
+            if (tabName === 'home') {
+                document.getElementById('menu-home').classList.add('active');
+                document.getElementById('view-home').classList.remove('hidden');
+                tabTitle.innerText = "Dashboard Overview";
+                loadDashboardWidgets(); // Reload widgets on return
+            } else {
+                document.getElementById(`menu-${tabName}`).classList.add('active');
+                const frame = document.getElementById(`frame-${tabName}`);
+                frame.classList.add('active');
+                
+                // Format Title
+                if (tabName === 'work') tabTitle.innerText = "Work Hour Tracker";
+                if (tabName === 'friend') tabTitle.innerText = "Friend Tracker";
+                if (tabName === 'food') tabTitle.innerText = "Food Prep Tracker";
+            }
+
+            // Close sidebar on mobile
+            document.getElementById('sidebar').classList.remove('show');
+        }
+
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('show');
+        }
+
+        // --- DASHBOARD WIDGETS DATA LOADING ---
+        function loadDashboardWidgets() {
+            loadWorkWidgetData();
+            loadFriendWidgetData();
+            loadFoodWidgetData();
+        }
+
+        function loadWorkWidgetData() {
+            const statVal = document.getElementById('stat-work-balance');
+            const widgetList = document.getElementById('widget-work-list');
+            
+            const cachedData = localStorage.getItem("workTracker_localData");
+            if (!cachedData) {
+                statVal.innerText = "--";
+                statVal.className = "stat-value text-muted";
+                widgetList.innerHTML = '<div class="text-center text-muted py-3">No work records found.</div>';
+                return;
+            }
+
+            try {
+                const logs = JSON.parse(cachedData);
+                if (!Array.isArray(logs) || logs.length === 0) {
+                    statVal.innerText = "0.00h";
+                    statVal.className = "stat-value text-secondary";
+                    widgetList.innerHTML = '<div class="text-center text-muted py-3">No work records found.</div>';
+                    return;
+                }
+
+                // Balance
+                const totalBalance = logs.reduce((sum, item) => sum + (parseFloat(item.variance) || 0), 0);
+                statVal.innerText = (totalBalance > 0 ? "+" : "") + totalBalance.toFixed(2) + "h";
+                if (totalBalance >= 0) {
+                    statVal.className = "stat-value text-success";
+                } else {
+                    statVal.className = "stat-value text-danger";
+                }
+
+                // Recent entries (limit 3)
+                const sortedLogs = [...logs].sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 3);
+                widgetList.innerHTML = '';
+                sortedLogs.forEach(entry => {
+                    const badgeClass = entry.variance >= 0 ? 'bg-success-subtle text-success' : 'bg-danger-subtle text-danger';
+                    const sign = entry.variance > 0 ? '+' : '';
+                    
+                    const div = document.createElement('div');
+                    div.className = 'list-group-item d-flex justify-content-between align-items-center py-3 border-0 border-bottom';
+                    div.innerHTML = `
+                        <div>
+                            <div class="fw-bold text-dark">${entry.date} ${entry.weekend ? '<span class="badge bg-secondary">WKND</span>' : ''}</div>
+                            <div class="small text-muted text-truncate" style="max-width: 280px;">${entry.comment || 'No description'}</div>
+                        </div>
+                        <div class="text-end">
+                            <span class="badge ${badgeClass} fs-7 px-2 py-1">${sign}${entry.variance.toFixed(2)}h</span>
+                            <div class="small text-muted mt-1 monospace">${entry.worked}h worked</div>
+                        </div>
+                    `;
+                    widgetList.appendChild(div);
+                });
+
+            } catch (e) {
+                console.error(e);
+                statVal.innerText = "Error";
+                widgetList.innerHTML = '<div class="text-center text-danger py-3">Error loading work data.</div>';
             }
         }
-    </script>
 
+        function loadFriendWidgetData() {
+            const statVal = document.getElementById('stat-friends-count');
+            const widgetList = document.getElementById('widget-friends-list');
+
+            const cachedData = localStorage.getItem("myFriendTracker");
+            if (!cachedData) {
+                statVal.innerText = "0";
+                widgetList.innerHTML = '<div class="text-center text-muted py-3">No friends tracked yet.</div>';
+                return;
+            }
+
+            try {
+                const friends = JSON.parse(cachedData);
+                if (!Array.isArray(friends) || friends.length === 0) {
+                    statVal.innerText = "0";
+                    widgetList.innerHTML = '<div class="text-center text-muted py-3">No friends tracked yet.</div>';
+                    return;
+                }
+
+                statVal.innerText = friends.length;
+
+                // Find friends needing contact (Never contacted, or >14 days ago)
+                const now = new Date();
+                const needingContact = [];
+
+                friends.forEach((friend, idx) => {
+                    if (!friend.lastContact || friend.lastContact === 'Never') {
+                        needingContact.push({ friend, idx, daysAgo: Infinity });
+                    } else {
+                        const lastDate = new Date(friend.lastContact + 'T12:00:00');
+                        const diffTime = Math.abs(now - lastDate);
+                        const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+                        if (diffDays > 14) {
+                            needingContact.push({ friend, idx, daysAgo: diffDays });
+                        }
+                    }
+                });
+
+                if (needingContact.length === 0) {
+                    widgetList.innerHTML = '<div class="text-center text-success py-3"><i class="fas fa-check-circle"></i> Everyone is up to date!</div>';
+                    return;
+                }
+
+                // Sort: Never first, then highest days ago
+                needingContact.sort((a, b) => b.daysAgo - a.daysAgo);
+                
+                widgetList.innerHTML = '';
+                needingContact.slice(0, 4).forEach(item => {
+                    const statusText = item.daysAgo === Infinity ? 'Never' : `${item.daysAgo} days ago`;
+                    const badgeClass = item.daysAgo === Infinity ? 'bg-danger text-white' : 'bg-warning text-dark';
+                    
+                    const div = document.createElement('div');
+                    div.className = 'list-group-item d-flex justify-content-between align-items-center py-3 border-0 border-bottom';
+                    div.innerHTML = `
+                        <div>
+                            <div class="fw-bold text-dark">${item.friend.name}</div>
+                            <div class="small text-muted">Last contact: <span class="badge ${badgeClass}">${statusText}</span></div>
+                        </div>
+                        <button class="btn btn-outline-primary btn-sm rounded-pill px-3" onclick="goToFriendContact(${item.idx})">
+                            <i class="fas fa-comment-dots"></i> Log Contact
+                        </button>
+                    `;
+                    widgetList.appendChild(div);
+                });
+
+            } catch (e) {
+                console.error(e);
+                statVal.innerText = "Error";
+                widgetList.innerHTML = '<div class="text-center text-danger py-3">Error loading friend data.</div>';
+            }
+        }
+
+        function loadFoodWidgetData() {
+            const statVal = document.getElementById('stat-food-count');
+            const widgetList = document.getElementById('widget-food-list');
+
+            const cachedData = localStorage.getItem("prepItems");
+            if (!cachedData) {
+                statVal.innerText = "0/0";
+                widgetList.innerHTML = '<div class="text-center text-muted py-3">No food items found.</div>';
+                return;
+            }
+
+            try {
+                const items = JSON.parse(cachedData);
+                if (!Array.isArray(items) || items.length === 0) {
+                    statVal.innerText = "0/0";
+                    widgetList.innerHTML = '<div class="text-center text-muted py-3">No food items found.</div>';
+                    return;
+                }
+
+                const completedCount = items.filter(i => i.count >= (i.target || 5)).length;
+                statVal.innerText = `${completedCount}/${items.length}`;
+
+                widgetList.innerHTML = '';
+                items.forEach((item, idx) => {
+                    const isComplete = item.count >= (item.target || 5);
+                    const isEmpty = item.count === 0;
+                    
+                    let statusClass = 'text-primary';
+                    if (isComplete) statusClass = 'text-success';
+                    if (isEmpty) statusClass = 'text-danger fw-bold';
+
+                    const div = document.createElement('div');
+                    div.className = 'list-group-item d-flex justify-content-between align-items-center py-2 border-0 border-bottom';
+                    div.innerHTML = `
+                        <div>
+                            <div class="fw-bold text-capitalize text-dark">${item.name}</div>
+                            <div class="small text-muted">Goal: ${item.target || 5}</div>
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            <button class="btn btn-outline-danger btn-sm px-2 py-0" onclick="quickChangeFoodCount(${idx}, -1)">-</button>
+                            <span class="monospace fw-bold ${statusClass}" style="min-width: 38px; text-align: center;">${item.count}/${item.target || 5}</span>
+                            <button class="btn btn-outline-success btn-sm px-2 py-0" onclick="quickChangeFoodCount(${idx}, 1)">+</button>
+                        </div>
+                    `;
+                    widgetList.appendChild(div);
+                });
+
+            } catch (e) {
+                console.error(e);
+                statVal.innerText = "Error";
+                widgetList.innerHTML = '<div class="text-center text-danger py-3">Error loading food data.</div>';
+            }
+        }
+
+        // --- DASHBOARD ACTIONS ---
+        function goToFriendContact(friendIndex) {
+            switchTab('friend');
+            setTimeout(() => {
+                const friendFrame = document.getElementById("frame-friend").contentWindow;
+                if (friendFrame && typeof friendFrame.openNoteModal === 'function') {
+                    friendFrame.openNoteModal(friendIndex);
+                }
+            }, 200);
+        }
+
+        function quickChangeFoodCount(itemIndex, change) {
+            const foodFrame = document.getElementById("frame-food").contentWindow;
+            if (foodFrame && typeof foodFrame.changeCount === 'function') {
+                foodFrame.changeCount(itemIndex, change);
+                // The iframe automatically updates localStorage. Reload widgets locally.
+                setTimeout(loadDashboardWidgets, 100);
+            }
+        }
+
+        // --- CONFIGURATION MANAGEMENT ---
+        function openSettingsModal() {
+            const apiKey = localStorage.getItem("workTracker_apiKey") || "";
+            const workBinId = localStorage.getItem("workTracker_binId") || "";
+            const workStdHours = localStorage.getItem("workTracker_stdHours") || "8.0";
+
+            let friendBinId = "";
+            try {
+                const friendConfig = JSON.parse(localStorage.getItem("myFriendTrackerConfig")) || {};
+                friendBinId = friendConfig.binId || "";
+            } catch (e) {}
+
+            const foodBinId = localStorage.getItem("jsonbin_id") || "";
+
+            document.getElementById("settings-apiKey").value = apiKey;
+            document.getElementById("settings-workBinId").value = workBinId;
+            document.getElementById("settings-workHours").value = workStdHours;
+            document.getElementById("settings-friendBinId").value = friendBinId;
+            document.getElementById("settings-foodBinId").value = foodBinId;
+
+            new bootstrap.Modal(document.getElementById("settingsModal")).show();
+        }
+
+        function saveSettings() {
+            const apiKey = document.getElementById("settings-apiKey").value.trim();
+            const workBinId = document.getElementById("settings-workBinId").value.trim();
+            const workStdHours = document.getElementById("settings-workHours").value.trim();
+            const friendBinId = document.getElementById("settings-friendBinId").value.trim();
+            const foodBinId = document.getElementById("settings-foodBinId").value.trim();
+
+            // Propagate settings to localStorage keys read by each child app
+            localStorage.setItem("workTracker_apiKey", apiKey);
+            localStorage.setItem("workTracker_binId", workBinId);
+            localStorage.setItem("workTracker_stdHours", workStdHours);
+
+            localStorage.setItem("myFriendTrackerConfig", JSON.stringify({ binId: friendBinId, apiKey: apiKey }));
+
+            localStorage.setItem("jsonbin_key", apiKey);
+            localStorage.setItem("jsonbin_id", foodBinId);
+
+            // Close modal
+            const modalEl = document.getElementById("settingsModal");
+            bootstrap.Modal.getInstance(modalEl).hide();
+
+            // Force reload frames to apply configuration
+            document.getElementById("frame-work").contentWindow.location.reload();
+            document.getElementById("frame-friend").contentWindow.location.reload();
+            document.getElementById("frame-food").contentWindow.location.reload();
+
+            // Refresh dashboard widgets after frames re-initialize
+            setTimeout(loadDashboardWidgets, 1000);
+            alert("Settings saved and trackers reinitialized!");
+        }
+
+        function syncAll() {
+            try {
+                const workFrame = document.getElementById("frame-work").contentWindow;
+                const friendFrame = document.getElementById("frame-friend").contentWindow;
+                const foodFrame = document.getElementById("frame-food").contentWindow;
+
+                let syncedCount = 0;
+
+                if (workFrame && typeof workFrame.fetchData === 'function') {
+                    workFrame.fetchData();
+                    syncedCount++;
+                }
+                if (friendFrame && typeof friendFrame.loadFromCloud === 'function') {
+                    friendFrame.loadFromCloud();
+                    syncedCount++;
+                }
+                if (foodFrame && typeof foodFrame.syncDown === 'function') {
+                    foodFrame.syncDown();
+                    syncedCount++;
+                }
+                
+                // Reload dashboard widgets after frames sync
+                setTimeout(loadDashboardWidgets, 2000);
+                if (syncedCount > 0) {
+                    alert("Sync triggered for all active applications!");
+                }
+            } catch (e) {
+                console.error("Failed to sync all frames", e);
+                alert("Error synchronizing: Check if API configuration is completed.");
+            }
+        }
+
+        // --- STARTUP ---
+        window.addEventListener('load', () => {
+            loadDashboardWidgets();
+            
+            // Periodically refresh widgets in background to capture iframe state changes
+            setInterval(loadDashboardWidgets, 3000);
+        });
+    </script>
 </body>
 </html>
