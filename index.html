@@ -835,12 +835,22 @@
                         localStorage.removeItem("gdrive_fileid_friend_tracker_data.json");
                         localStorage.removeItem("gdrive_fileid_food_tracker_data.json");
 
-                        // Reload iframes
-                        document.getElementById("frame-work").contentWindow.location.reload();
-                        document.getElementById("frame-friend").contentWindow.location.reload();
-                        document.getElementById("frame-food").contentWindow.location.reload();
+                        // Ensure App Data folder exists first to avoid concurrent iframe creation race conditions
+                        ensureAppDataFolder(response.access_token).then(() => {
+                            // Reload iframes
+                            document.getElementById("frame-work").contentWindow.location.reload();
+                            document.getElementById("frame-friend").contentWindow.location.reload();
+                            document.getElementById("frame-food").contentWindow.location.reload();
 
-                        setTimeout(loadDashboardWidgets, 1000);
+                            setTimeout(loadDashboardWidgets, 1000);
+                        }).catch(err => {
+                            console.error("Failed to ensure App Data folder: ", err);
+                            // Fallback reload
+                            document.getElementById("frame-work").contentWindow.location.reload();
+                            document.getElementById("frame-friend").contentWindow.location.reload();
+                            document.getElementById("frame-food").contentWindow.location.reload();
+                            setTimeout(loadDashboardWidgets, 1000);
+                        });
                     },
                 });
 
@@ -848,6 +858,41 @@
             } catch (e) {
                 console.error(e);
                 alert("Failed to initialize Google login client. Make sure the Client ID is correct.");
+            }
+        }
+
+        async function ensureAppDataFolder(token) {
+            try {
+                const searchUrl = `https://www.googleapis.com/drive/v3/files?q=name='App+Data'+and+mimeType='application/vnd.google-apps.folder'+and+trashed=false&fields=files(id)`;
+                const searchResponse = await fetch(searchUrl, {
+                    headers: { "Authorization": `Bearer ${token}` }
+                });
+                const searchData = await searchResponse.json();
+                
+                if (searchData.files && searchData.files.length > 0) {
+                    const folderId = searchData.files[0].id;
+                    localStorage.setItem("gdrive_folderid_appdata", folderId);
+                    return folderId;
+                }
+                
+                const createUrl = "https://www.googleapis.com/drive/v3/files";
+                const createResponse = await fetch(createUrl, {
+                    method: "POST",
+                    headers: { 
+                        "Authorization": `Bearer ${token}`,
+                        "Content-Type": "application/json" 
+                    },
+                    body: JSON.stringify({
+                        name: "App Data",
+                        mimeType: "application/vnd.google-apps.folder"
+                    })
+                });
+                const folderData = await createResponse.json();
+                localStorage.setItem("gdrive_folderid_appdata", folderData.id);
+                return folderData.id;
+            } catch (e) {
+                console.error("Error ensuring App Data folder", e);
+                throw e;
             }
         }
 
