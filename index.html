@@ -261,6 +261,8 @@
             }
         }
     </style>
+    <!-- Google Identity Services -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
 
@@ -438,36 +440,25 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <p class="small text-muted">Configure your JSONBin API key and Bin IDs once to synchronize all trackers.</p>
+                    <p class="small text-muted">Configure your Google Drive integration once to store and synchronize all tracker data.</p>
                     
                     <div class="mb-3">
-                        <label class="form-label fw-bold">Master API Key (X-Master-Key)</label>
-                        <input type="password" id="settings-apiKey" class="form-control" placeholder="X-Master-Key from jsonbin.io">
+                        <label class="form-label fw-bold">Google Client ID</label>
+                        <input type="text" id="settings-clientId" class="form-control" placeholder="Paste your OAuth 2.0 Web Client ID here">
+                    </div>
+                    
+                    <div class="d-grid mb-3">
+                        <button id="btn-gdrive-signin" class="btn btn-outline-danger" onclick="initiateGoogleDriveSignIn()">
+                            <i class="fab fa-google me-2"></i> Sign In with Google
+                        </button>
+                        <div id="gdrive-status-msg" class="text-center mt-2 small text-muted">Not connected to Google Drive</div>
                     </div>
                     
                     <hr>
                     <h6 class="fw-bold text-primary mb-2">Work Tracker Settings</h6>
                     <div class="mb-3">
-                        <label class="form-label">Bin ID</label>
-                        <input type="text" id="settings-workBinId" class="form-control" placeholder="Work Tracker Bin ID">
-                    </div>
-                    <div class="mb-3">
                         <label class="form-label">Standard Daily Hours (Mon-Fri)</label>
                         <input type="number" id="settings-workHours" class="form-control" step="0.5" placeholder="8.0">
-                    </div>
-
-                    <hr>
-                    <h6 class="fw-bold text-success mb-2">Friend Tracker Settings</h6>
-                    <div class="mb-3">
-                        <label class="form-label">Bin ID</label>
-                        <input type="text" id="settings-friendBinId" class="form-control" placeholder="Friend Tracker Bin ID">
-                    </div>
-
-                    <hr>
-                    <h6 class="fw-bold text-orange mb-2">Food Prep Tracker Settings</h6>
-                    <div class="mb-3">
-                        <label class="form-label">Bin ID</label>
-                        <input type="text" id="settings-foodBinId" class="form-control" placeholder="Food Tracker Bin ID">
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -483,6 +474,12 @@
 
     <script>
         let activeTab = 'home';
+
+        function hasValidGDriveToken() {
+            const token = localStorage.getItem("gdrive_access_token");
+            const expiresAt = localStorage.getItem("gdrive_token_expires_at");
+            return token && expiresAt && Date.now() < parseInt(expiresAt);
+        }
 
         // --- TAB SWITCHING ---
         function switchTab(tabName) {
@@ -522,20 +519,32 @@
                 syncAllBtn.style.display = 'none';
                 
                 // Format Title & dynamic labels
+                let titleText = "";
+                if (tabName === 'work') titleText = "Work Hour Tracker";
+                if (tabName === 'friend') titleText = "Friend Tracker";
+                if (tabName === 'food') titleText = "Food Prep Tracker";
+
                 if (tabName === 'work') {
-                    tabTitle.innerText = "Work Hour Tracker";
                     loadBtn.innerHTML = '<i class="fas fa-cloud-download-alt"></i> Load Work';
                     saveBtn.innerHTML = '<i class="fas fa-cloud-upload-alt"></i> Save Work';
                 }
                 if (tabName === 'friend') {
-                    tabTitle.innerText = "Friend Tracker";
                     loadBtn.innerHTML = '<i class="fas fa-cloud-download-alt"></i> Load Friends';
                     saveBtn.innerHTML = '<i class="fas fa-cloud-upload-alt"></i> Save Friends';
                 }
                 if (tabName === 'food') {
-                    tabTitle.innerText = "Food Prep Tracker";
                     loadBtn.innerHTML = '<i class="fas fa-cloud-download-alt"></i> Load Food';
                     saveBtn.innerHTML = '<i class="fas fa-cloud-upload-alt"></i> Save Food';
+                }
+
+                if (!hasValidGDriveToken()) {
+                    loadBtn.disabled = true;
+                    saveBtn.disabled = true;
+                    tabTitle.innerHTML = `${titleText} <span class="badge bg-danger ms-2 fs-7"><i class="fas fa-exclamation-triangle"></i> Google Drive Sign-In Required</span>`;
+                } else {
+                    loadBtn.disabled = false;
+                    saveBtn.disabled = false;
+                    tabTitle.innerText = titleText;
                 }
                 
                 updateParentSaveButtonState();
@@ -762,44 +771,94 @@
         }
 
         // --- CONFIGURATION MANAGEMENT ---
+        let tokenClient = null;
+        let clientId = localStorage.getItem("gdrive_clientId") || "";
+
         function openSettingsModal() {
-            const apiKey = localStorage.getItem("workTracker_apiKey") || "";
-            const workBinId = localStorage.getItem("workTracker_binId") || "";
+            clientId = localStorage.getItem("gdrive_clientId") || "";
             const workStdHours = localStorage.getItem("workTracker_stdHours") || "8.0";
 
-            let friendBinId = "";
-            try {
-                const friendConfig = JSON.parse(localStorage.getItem("myFriendTrackerConfig")) || {};
-                friendBinId = friendConfig.binId || "";
-            } catch (e) {}
-
-            const foodBinId = localStorage.getItem("jsonbin_id") || "";
-
-            document.getElementById("settings-apiKey").value = apiKey;
-            document.getElementById("settings-workBinId").value = workBinId;
+            document.getElementById("settings-clientId").value = clientId;
             document.getElementById("settings-workHours").value = workStdHours;
-            document.getElementById("settings-friendBinId").value = friendBinId;
-            document.getElementById("settings-foodBinId").value = foodBinId;
+
+            updateGDriveStatusUI();
 
             new bootstrap.Modal(document.getElementById("settingsModal")).show();
         }
 
+        function updateGDriveStatusUI() {
+            const statusMsg = document.getElementById("gdrive-status-msg");
+            const signInBtn = document.getElementById("btn-gdrive-signin");
+
+            if (hasValidGDriveToken()) {
+                const expiresAt = localStorage.getItem("gdrive_token_expires_at");
+                const expDate = new Date(parseInt(expiresAt)).toLocaleTimeString();
+                statusMsg.innerText = `Connected! Session active until ${expDate}`;
+                statusMsg.className = "text-center mt-2 small text-success fw-bold";
+                signInBtn.innerText = "Reconnect Google Account";
+                signInBtn.className = "btn btn-outline-success";
+            } else {
+                statusMsg.innerText = "Not connected to Google Drive";
+                statusMsg.className = "text-center mt-2 small text-danger";
+                signInBtn.innerText = "Sign In with Google";
+                signInBtn.className = "btn btn-outline-danger";
+            }
+        }
+
+        function initiateGoogleDriveSignIn() {
+            clientId = document.getElementById("settings-clientId").value.trim();
+            if (!clientId) {
+                alert("Please enter your Google Client ID first.");
+                return;
+            }
+
+            try {
+                tokenClient = google.accounts.oauth2.initTokenClient({
+                    client_id: clientId,
+                    scope: 'https://www.googleapis.com/auth/drive.file',
+                    callback: (response) => {
+                        if (response.error !== undefined) {
+                            alert("Google Login Error: " + response.error);
+                            return;
+                        }
+                        
+                        const expiresAt = Date.now() + (response.expires_in * 1000);
+                        localStorage.setItem("gdrive_access_token", response.access_token);
+                        localStorage.setItem("gdrive_token_expires_at", expiresAt);
+                        
+                        alert("Successfully connected to Google Drive!");
+                        updateGDriveStatusUI();
+
+                        // Clear cached file IDs in case we changed user accounts
+                        localStorage.removeItem("gdrive_folderid_appdata");
+                        localStorage.removeItem("gdrive_fileid_work_tracker_data.json");
+                        localStorage.removeItem("gdrive_fileid_friend_tracker_data.json");
+                        localStorage.removeItem("gdrive_fileid_food_tracker_data.json");
+
+                        // Reload iframes
+                        document.getElementById("frame-work").contentWindow.location.reload();
+                        document.getElementById("frame-friend").contentWindow.location.reload();
+                        document.getElementById("frame-food").contentWindow.location.reload();
+
+                        setTimeout(loadDashboardWidgets, 1000);
+                    },
+                });
+
+                tokenClient.requestAccessToken({ prompt: 'consent' });
+            } catch (e) {
+                console.error(e);
+                alert("Failed to initialize Google login client. Make sure the Client ID is correct.");
+            }
+        }
+
         function saveSettings() {
-            const apiKey = document.getElementById("settings-apiKey").value.trim();
-            const workBinId = document.getElementById("settings-workBinId").value.trim();
+            const newClientId = document.getElementById("settings-clientId").value.trim();
             const workStdHours = document.getElementById("settings-workHours").value.trim();
-            const friendBinId = document.getElementById("settings-friendBinId").value.trim();
-            const foodBinId = document.getElementById("settings-foodBinId").value.trim();
 
-            // Propagate settings to localStorage keys read by each child app
-            localStorage.setItem("workTracker_apiKey", apiKey);
-            localStorage.setItem("workTracker_binId", workBinId);
+            localStorage.setItem("gdrive_clientId", newClientId);
             localStorage.setItem("workTracker_stdHours", workStdHours);
-
-            localStorage.setItem("myFriendTrackerConfig", JSON.stringify({ binId: friendBinId, apiKey: apiKey }));
-
-            localStorage.setItem("jsonbin_key", apiKey);
-            localStorage.setItem("jsonbin_id", foodBinId);
+            
+            clientId = newClientId;
 
             // Close modal
             const modalEl = document.getElementById("settingsModal");
@@ -812,10 +871,15 @@
 
             // Refresh dashboard widgets after frames re-initialize
             setTimeout(loadDashboardWidgets, 1000);
-            alert("Settings saved and trackers reinitialized!");
+            alert("Settings saved!");
         }
 
         function syncAll() {
+            if (!hasValidGDriveToken()) {
+                alert("Please open Settings and Sign In with Google first.");
+                return;
+            }
+
             try {
                 const workFrame = document.getElementById("frame-work").contentWindow;
                 const friendFrame = document.getElementById("frame-friend").contentWindow;
@@ -843,12 +907,17 @@
                 }
             } catch (e) {
                 console.error("Failed to sync all frames", e);
-                alert("Error synchronizing: Check if API configuration is completed.");
+                alert("Error synchronizing: Check if Google Drive configuration is completed.");
             }
         }
 
         // --- ACTIVE APP SYNC TRIGGERS ---
         async function triggerActiveAppLoad() {
+            if (!hasValidGDriveToken()) {
+                alert("Please open Settings and Sign In with Google first.");
+                return;
+            }
+
             try {
                 let success = false;
                 if (activeTab === 'work') {
@@ -872,15 +941,20 @@
                 }
                 
                 if (success) {
-                    alert(`${activeTab.charAt(0).toUpperCase() + activeTab.slice(1)} data loaded from cloud successfully!`);
+                    alert(`${activeTab.charAt(0).toUpperCase() + activeTab.slice(1)} data loaded from Google Drive successfully!`);
                 }
             } catch (e) {
                 console.error("Failed to trigger load for active app", e);
-                alert("Load failed! Please check your connection and configuration.");
+                alert("Load failed: " + e.message);
             }
         }
 
         async function triggerActiveAppSave() {
+            if (!hasValidGDriveToken()) {
+                alert("Please open Settings and Sign In with Google first.");
+                return;
+            }
+
             try {
                 let success = false;
                 if (activeTab === 'work') {
@@ -904,11 +978,11 @@
                 }
                 
                 if (success) {
-                    alert(`${activeTab.charAt(0).toUpperCase() + activeTab.slice(1)} data saved to cloud successfully!`);
+                    alert(`${activeTab.charAt(0).toUpperCase() + activeTab.slice(1)} data saved to Google Drive successfully!`);
                 }
             } catch (e) {
                 console.error("Failed to trigger save for active app", e);
-                alert("Save failed! Please check your connection and configuration.");
+                alert("Save failed: " + e.message);
             }
         }
 
@@ -941,6 +1015,12 @@
         }
 
         // --- STARTUP ---
+        function hasValidGDriveToken() {
+            const token = localStorage.getItem("gdrive_access_token");
+            const expires = localStorage.getItem("gdrive_token_expires_at");
+            return token && expires && Date.now() < parseInt(expires);
+        }
+
         window.addEventListener('load', () => {
             loadDashboardWidgets();
             
@@ -951,5 +1031,6 @@
             }, 3000);
         });
     </script>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
 </body>
 </html>
