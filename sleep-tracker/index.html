@@ -613,7 +613,7 @@
             if (match) {
                 selectedHour = parseInt(match[1]);
                 selectedMinute = parseInt(match[2]);
-                selectedAMPM = match[3] || 'AM';
+                selectedAMPM = (match[3] || 'AM').toUpperCase();
             }
         } else {
             selectedHour = field === 'bed' ? 11 : 7;
@@ -625,7 +625,10 @@
         setClockAMPM(selectedAMPM);
         updateDigitalDisplay();
         
-        new bootstrap.Modal(document.getElementById('clockModal')).show();
+        const modalEl = document.getElementById('clockModal');
+        let modalInstance = bootstrap.Modal.getInstance(modalEl);
+        if (!modalInstance) modalInstance = new bootstrap.Modal(modalEl);
+        modalInstance.show();
     }
 
     function switchClockMode(mode) {
@@ -693,8 +696,7 @@
             isDraggingHand = false;
             // Switch mode automatically to minutes if hour was selected
             if (currentClockMode === 'hour') {
-                setTimeout(() => switchClockMode('minute'), 300000); // Slight delay or immediately
-                switchClockMode('minute');
+                setTimeout(() => switchClockMode('minute'), 50);
             }
         }
     }
@@ -737,7 +739,10 @@
         document.getElementById(`${activePickerField}TimeInput`).value = timeString;
         
         // Hide Modal
-        bootstrap.Modal.getInstance(document.getElementById('clockModal')).hide();
+        const modalEl = document.getElementById('clockModal');
+        let modalInstance = bootstrap.Modal.getInstance(modalEl);
+        if (!modalInstance) modalInstance = new bootstrap.Modal(modalEl);
+        modalInstance.hide();
         
         // Auto-calculate hours
         calculateSleepHours();
