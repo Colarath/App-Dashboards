@@ -245,6 +245,22 @@
             cursor: pointer;
         }
 
+        /* Sidebar Backdrop Overlay on Mobile */
+        .sidebar-backdrop {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(4px);
+            z-index: 990;
+        }
+        .sidebar-backdrop.show {
+            display: block;
+        }
+
         /* --- RESPONSIVENESS --- */
         @media (max-width: 991px) {
             .sidebar {
@@ -258,6 +274,34 @@
             }
             .mobile-toggle {
                 display: block;
+            }
+            .view-container {
+                padding: 15px;
+            }
+            .top-header {
+                padding: 0 15px;
+            }
+        }
+
+        @media (max-width: 576px) {
+            .view-container {
+                padding: 8px;
+            }
+            .top-header {
+                padding: 0 10px;
+                height: 60px;
+            }
+            .header-title h4 {
+                font-size: 1.15rem;
+            }
+            .mobile-toggle {
+                font-size: 1.25rem;
+            }
+            .header-actions button span {
+                display: none;
+            }
+            .header-actions button i {
+                margin-right: 0 !important;
             }
         }
     </style>
@@ -315,6 +359,9 @@
         </div>
     </aside>
 
+    <!-- SIDEBAR BACKDROP OVERLAY -->
+    <div class="sidebar-backdrop" id="sidebar-backdrop" onclick="toggleSidebar()"></div>
+
     <!-- MAIN CONTENT -->
     <main class="main-content">
         <!-- HEADER -->
@@ -327,20 +374,20 @@
                     <h4 id="current-tab-title">Dashboard Overview</h4>
                 </div>
             </div>
-            <div class="d-flex align-items-center gap-2">
+            <div class="header-actions d-flex align-items-center gap-2">
                 <!-- Dynamic App Sync Buttons -->
                 <button id="btn-app-load" class="btn btn-outline-primary btn-sm" style="display: none;" onclick="triggerActiveAppLoad()">
-                    <i class="fas fa-cloud-download-alt"></i> Load Data
+                    <i class="fas fa-cloud-download-alt"></i> <span>Load Data</span>
                 </button>
                 <button id="btn-app-save" class="btn btn-primary btn-sm" style="display: none;" onclick="triggerActiveAppSave()">
-                    <i class="fas fa-cloud-upload-alt"></i> Save Data
+                    <i class="fas fa-cloud-upload-alt"></i> <span>Save Data</span>
                 </button>
 
                 <button id="btn-sync-all" class="btn btn-outline-primary btn-sm" onclick="syncAll()">
-                    <i class="fas fa-sync-alt"></i> Sync All
+                    <i class="fas fa-sync-alt"></i> <span>Sync All</span>
                 </button>
                 <button class="btn btn-outline-secondary btn-sm" onclick="openSettingsModal()">
-                    <i class="fas fa-cog"></i> Settings
+                    <i class="fas fa-cog"></i> <span>Settings</span>
                 </button>
             </div>
         </header>
@@ -610,10 +657,12 @@
 
             // Close sidebar on mobile
             document.getElementById('sidebar').classList.remove('show');
+            document.getElementById('sidebar-backdrop').classList.remove('show');
         }
 
         function toggleSidebar() {
             document.getElementById('sidebar').classList.toggle('show');
+            document.getElementById('sidebar-backdrop').classList.toggle('show');
         }
 
         // --- DASHBOARD WIDGETS DATA LOADING ---
@@ -1312,11 +1361,11 @@
                 if (hasUnsaved) {
                     saveBtn.classList.remove('btn-primary');
                     saveBtn.classList.add('btn-warning');
-                    saveBtn.innerHTML = `<i class="fas fa-exclamation-triangle"></i> Save ${activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}`;
+                    saveBtn.innerHTML = `<i class="fas fa-exclamation-triangle"></i> <span>Save ${activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}</span>`;
                 } else {
                     saveBtn.classList.remove('btn-warning');
                     saveBtn.classList.add('btn-primary');
-                    saveBtn.innerHTML = `<i class="fas fa-cloud-upload-alt"></i> Save ${activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}`;
+                    saveBtn.innerHTML = `<i class="fas fa-cloud-upload-alt"></i> <span>Save ${activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}</span>`;
                 }
             } catch (e) {
                 // Ignore cross-origin error

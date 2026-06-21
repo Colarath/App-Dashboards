@@ -61,6 +61,7 @@
         .bg-friction-2 { background-color: #ffc107; color: #212529 !important; }
         .bg-friction-3 { background-color: #dc3545; }
         .bg-friction-null { background-color: #6c757d; }
+        .comment-text { font-size: 0.85em; color: #6c757d; font-style: italic; display: block; margin-top: 2px;}
 
         /* Circular Clock Picker Styles */
         .clock-modal-content {
@@ -195,7 +196,7 @@
 
         /* IFrame Embedded Styles */
         body.embedded { background-color: transparent; }
-        body.embedded .main-container { margin: 15px auto; }
+        body.embedded .main-container { margin: 15px auto; padding: 0 12px; }
         body.embedded #header-row { display: none !important; }
         body.embedded #cloud-controls-card { display: none !important; }
     </style>
@@ -304,13 +305,12 @@
             <table class="table table-hover align-middle mb-0">
                 <thead class="table-light">
                     <tr>
-                        <th class="ps-4">Date</th>
+                        <th class="ps-4">Date / Note</th>
                         <th>Medication</th>
                         <th>Time Taken</th>
                         <th>Kicked In</th>
                         <th>Wore Off</th>
                         <th class="text-center">Friction</th>
-                        <th style="width: 35%;">Notes / Side Effects</th>
                         <th class="text-end pe-4">Actions</th>
                     </tr>
                 </thead>
@@ -644,14 +644,20 @@
                 frictionBadge = `<span class="friction-badge bg-friction-${entry.friction}">${entry.friction}</span>`;
             }
 
+            const noteHtml = entry.notes 
+                ? `<span class="comment-text">${entry.notes}</span>` 
+                : "";
+
             tr.innerHTML = `
-                <td class="ps-4 fw-bold">${formatDisplayDate(entry.date)}</td>
+                <td class="ps-4">
+                    <strong>${formatDisplayDate(entry.date)}</strong>
+                    ${noteHtml}
+                </td>
                 <td class="fw-medium">${entry.medication}</td>
                 <td>${entry.timeTaken || '-'}</td>
                 <td>${entry.kickedIn || '-'}</td>
                 <td>${entry.woreOff || '-'}</td>
                 <td class="text-center">${frictionBadge}</td>
-                <td class="small text-muted text-truncate" style="max-width: 320px;" title="${entry.notes}">${entry.notes || '-'}</td>
                 <td class="text-end pe-4">
                     <button class="btn btn-outline-danger btn-sm rounded-circle" onclick="deleteAdhdEntry(${originalIndex})">
                         <i class="fas fa-trash-alt"></i>
