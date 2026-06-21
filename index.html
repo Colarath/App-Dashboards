@@ -297,6 +297,12 @@
                     <span>Food Prep Tracker</span>
                 </a>
             </li>
+            <li class="menu-item" id="menu-sleep">
+                <a href="#" onclick="switchTab('sleep')">
+                    <i class="fas fa-bed"></i>
+                    <span>Sleep Journal</span>
+                </a>
+            </li>
         </ul>
         <div class="sidebar-footer">
             <span>v1.0.0 &copy; 2026</span>
@@ -341,7 +347,7 @@
                 
                 <!-- STAT CARDS ROW -->
                 <div class="row g-4 mb-4">
-                    <div class="col-12 col-md-4">
+                    <div class="col-12 col-md-6 col-lg-3">
                         <div class="stat-card">
                             <div class="stat-icon bg-blue-light">
                                 <i class="fas fa-business-time"></i>
@@ -350,7 +356,7 @@
                             <div class="stat-label">Work Hour Balance</div>
                         </div>
                     </div>
-                    <div class="col-12 col-md-4">
+                    <div class="col-12 col-md-6 col-lg-3">
                         <div class="stat-card">
                             <div class="stat-icon bg-green-light">
                                 <i class="fas fa-user-friends"></i>
@@ -359,13 +365,22 @@
                             <div class="stat-label">Friends Tracked</div>
                         </div>
                     </div>
-                    <div class="col-12 col-md-4">
+                    <div class="col-12 col-md-6 col-lg-3">
                         <div class="stat-card">
                             <div class="stat-icon bg-orange-light">
                                 <i class="fas fa-utensils"></i>
                             </div>
                             <div class="stat-value" id="stat-food-count">0/0</div>
                             <div class="stat-label">Meal Prep Completed</div>
+                        </div>
+                    </div>
+                    <div class="col-12 col-md-6 col-lg-3">
+                        <div class="stat-card">
+                            <div class="stat-icon bg-purple-light" style="background-color: #f5f3ff; color: #7c3aed;">
+                                <i class="fas fa-moon"></i>
+                            </div>
+                            <div class="stat-value" id="stat-sleep-average">0.0h</div>
+                            <div class="stat-label" id="stat-sleep-sublabel">Avg Fatigue: -/10</div>
                         </div>
                     </div>
                 </div>
@@ -443,6 +458,7 @@
             <iframe id="frame-work" src="work-tracker/index.html"></iframe>
             <iframe id="frame-friend" src="friend-tracker/index.html"></iframe>
             <iframe id="frame-food" src="food-tracker/index.html"></iframe>
+            <iframe id="frame-sleep" src="sleep-tracker/index.html"></iframe>
 
         </div>
     </main>
@@ -539,6 +555,7 @@
                 if (tabName === 'work') titleText = "Work Hour Tracker";
                 if (tabName === 'friend') titleText = "Friend Tracker";
                 if (tabName === 'food') titleText = "Food Prep Tracker";
+                if (tabName === 'sleep') titleText = "Sleep Journal";
 
                 if (tabName === 'work') {
                     loadBtn.innerHTML = '<i class="fas fa-cloud-download-alt"></i> Load Work';
@@ -551,6 +568,10 @@
                 if (tabName === 'food') {
                     loadBtn.innerHTML = '<i class="fas fa-cloud-download-alt"></i> Load Food';
                     saveBtn.innerHTML = '<i class="fas fa-cloud-upload-alt"></i> Save Food';
+                }
+                if (tabName === 'sleep') {
+                    loadBtn.innerHTML = '<i class="fas fa-cloud-download-alt"></i> Load Sleep';
+                    saveBtn.innerHTML = '<i class="fas fa-cloud-upload-alt"></i> Save Sleep';
                 }
 
                 if (!hasValidGDriveToken()) {
@@ -580,6 +601,7 @@
             loadFriendWidgetData();
             loadFoodWidgetData();
             loadResponseWidgetData();
+            loadSleepWidgetData();
         }
 
         function loadWorkWidgetData() {
@@ -812,6 +834,39 @@
             }
         }
 
+        function loadSleepWidgetData() {
+            const statVal = document.getElementById('stat-sleep-average');
+            const subLabel = document.getElementById('stat-sleep-sublabel');
+            
+            const cachedData = localStorage.getItem("sleepTracker_localData");
+            if (!cachedData) {
+                statVal.innerText = "--";
+                subLabel.innerText = "Avg Fatigue: -/10";
+                return;
+            }
+
+            try {
+                const logs = JSON.parse(cachedData);
+                if (!Array.isArray(logs) || logs.length === 0) {
+                    statVal.innerText = "0.0h";
+                    subLabel.innerText = "Avg Fatigue: -/10";
+                    return;
+                }
+
+                const totalSleep = logs.reduce((sum, item) => sum + (parseFloat(item.totalHours) || 0), 0);
+                const avgSleep = totalSleep / logs.length;
+                statVal.innerText = avgSleep.toFixed(1) + "h";
+
+                const totalFatigue = logs.reduce((sum, item) => sum + (parseInt(item.fatigue) || 0), 0);
+                const avgFatigue = totalFatigue / logs.length;
+                subLabel.innerText = `Avg Fatigue: ${avgFatigue.toFixed(1)}/10`;
+            } catch (e) {
+                console.error(e);
+                statVal.innerText = "Error";
+                subLabel.innerText = "Error loading stats";
+            }
+        }
+
         // --- DASHBOARD ACTIONS ---
         function goToFriendContact(friendIndex) {
             switchTab('friend');
@@ -891,26 +946,25 @@
                         alert("Successfully connected to Google Drive!");
                         updateGDriveStatusUI();
 
-                        // Clear cached file IDs in case we changed user accounts
                         localStorage.removeItem("gdrive_folderid_appdata");
                         localStorage.removeItem("gdrive_fileid_work_tracker_data.json");
                         localStorage.removeItem("gdrive_fileid_friend_tracker_data.json");
                         localStorage.removeItem("gdrive_fileid_food_tracker_data.json");
-
-                        // Ensure App Data folder exists first to avoid concurrent iframe creation race conditions
+                        localStorage.removeItem("gdrive_fileid_sleep_tracker_data.json");
+ 
                         ensureAppDataFolder(response.access_token).then(() => {
-                            // Reload iframes
                             document.getElementById("frame-work").contentWindow.location.reload();
                             document.getElementById("frame-friend").contentWindow.location.reload();
                             document.getElementById("frame-food").contentWindow.location.reload();
-
+                            document.getElementById("frame-sleep").contentWindow.location.reload();
+ 
                             setTimeout(loadDashboardWidgets, 1000);
                         }).catch(err => {
                             console.error("Failed to ensure App Data folder: ", err);
-                            // Fallback reload
                             document.getElementById("frame-work").contentWindow.location.reload();
                             document.getElementById("frame-friend").contentWindow.location.reload();
                             document.getElementById("frame-food").contentWindow.location.reload();
+                            document.getElementById("frame-sleep").contentWindow.location.reload();
                             setTimeout(loadDashboardWidgets, 1000);
                         });
                     },
@@ -967,16 +1021,14 @@
             
             clientId = newClientId;
 
-            // Close modal
             const modalEl = document.getElementById("settingsModal");
             bootstrap.Modal.getInstance(modalEl).hide();
 
-            // Force reload frames to apply configuration
             document.getElementById("frame-work").contentWindow.location.reload();
             document.getElementById("frame-friend").contentWindow.location.reload();
             document.getElementById("frame-food").contentWindow.location.reload();
-
-            // Refresh dashboard widgets after frames re-initialize
+            document.getElementById("frame-sleep").contentWindow.location.reload();
+ 
             setTimeout(loadDashboardWidgets, 1000);
             alert("Settings saved!");
         }
@@ -991,9 +1043,10 @@
                 const workFrame = document.getElementById("frame-work").contentWindow;
                 const friendFrame = document.getElementById("frame-friend").contentWindow;
                 const foodFrame = document.getElementById("frame-food").contentWindow;
-
+                const sleepFrame = document.getElementById("frame-sleep").contentWindow;
+ 
                 let syncedCount = 0;
-
+ 
                 if (workFrame && typeof workFrame.fetchData === 'function') {
                     workFrame.fetchData();
                     syncedCount++;
@@ -1006,8 +1059,11 @@
                     foodFrame.syncDown();
                     syncedCount++;
                 }
+                if (sleepFrame && typeof sleepFrame.loadFromCloud === 'function') {
+                    sleepFrame.loadFromCloud();
+                    syncedCount++;
+                }
                 
-                // Reload dashboard widgets after frames sync
                 setTimeout(loadDashboardWidgets, 2000);
                 if (syncedCount > 0) {
                     alert("Sync triggered for all active applications!");
@@ -1043,6 +1099,12 @@
                     const frame = document.getElementById("frame-food").contentWindow;
                     if (frame && typeof frame.syncDown === 'function') {
                         await frame.syncDown();
+                        success = true;
+                    }
+                } else if (activeTab === 'sleep') {
+                    const frame = document.getElementById("frame-sleep").contentWindow;
+                    if (frame && typeof frame.loadFromCloud === 'function') {
+                        await frame.loadFromCloud();
                         success = true;
                     }
                 }
@@ -1082,6 +1144,12 @@
                         await frame.syncUp();
                         success = true;
                     }
+                } else if (activeTab === 'sleep') {
+                    const frame = document.getElementById("frame-sleep").contentWindow;
+                    if (frame && typeof frame.saveToCloud === 'function') {
+                        await frame.saveToCloud();
+                        success = true;
+                    }
                 }
                 
                 if (success) {
@@ -1104,6 +1172,9 @@
                     if (frame) hasUnsaved = frame.hasUnsavedChanges;
                 } else if (activeTab === 'friend') {
                     const frame = document.getElementById("frame-friend").contentWindow;
+                    if (frame) hasUnsaved = frame.hasUnsavedChanges;
+                } else if (activeTab === 'sleep') {
+                    const frame = document.getElementById("frame-sleep").contentWindow;
                     if (frame) hasUnsaved = frame.hasUnsavedChanges;
                 }
 

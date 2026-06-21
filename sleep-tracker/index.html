@@ -1,0 +1,968 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sleep Journal Tracker</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <style>
+        body { background-color: #f0f2f5; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .main-container { max-width: 900px; margin: 30px auto; }
+        .card { border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border: none; margin-bottom: 20px; }
+        
+        .fatigue-badge {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: #fff;
+        }
+        
+        .bg-fatigue-1 { background-color: #198754; }
+        .bg-fatigue-2 { background-color: #2bc168; }
+        .bg-fatigue-3 { background-color: #4cd137; }
+        .bg-fatigue-4 { background-color: #fbc531; color: #212529 !important; }
+        .bg-fatigue-5 { background-color: #e1b12c; color: #212529 !important; }
+        .bg-fatigue-6 { background-color: #f97316; }
+        .bg-fatigue-7 { background-color: #e84118; }
+        .bg-fatigue-8 { background-color: #c23616; }
+        .bg-fatigue-9 { background-color: #7f0000; }
+        .bg-fatigue-10 { background-color: #3d0000; }
+
+        .soreness-pill {
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 1px solid rgba(0,0,0,0.1);
+        }
+        .soreness-pill.active {
+            background-color: #0d6efd !important;
+            color: #fff !important;
+            border-color: #0d6efd;
+        }
+
+        .cursor-pointer { cursor: pointer; }
+        
+        /* Circular Clock Picker Styles */
+        .clock-modal-content {
+            background: rgba(30, 41, 59, 0.95) !important;
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            color: #fff;
+        }
+        .clock-header {
+            font-size: 2.2rem;
+            font-weight: 700;
+            text-align: center;
+            padding: 20px 20px 10px 20px;
+            color: #3b82f6;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            user-select: none;
+        }
+        .clock-header span {
+            cursor: pointer;
+            opacity: 0.6;
+            transition: opacity 0.2s;
+        }
+        .clock-header span.active {
+            opacity: 1;
+            color: #fff;
+            border-bottom: 2px solid #3b82f6;
+        }
+        .clock-face-container {
+            width: 240px;
+            height: 240px;
+            margin: 20px auto;
+            position: relative;
+            background-color: rgba(15, 23, 42, 0.6);
+            border-radius: 50%;
+            border: 2px solid rgba(255, 255, 255, 0.05);
+            user-select: none;
+        }
+        .clock-face {
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+        .clock-number {
+            position: absolute;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+            font-weight: 500;
+            color: #94a3b8;
+            cursor: pointer;
+            border-radius: 50%;
+            user-select: none;
+            transition: background-color 0.1s, color 0.1s;
+            z-index: 5;
+        }
+        .clock-number.active {
+            color: #fff;
+            font-weight: 700;
+        }
+        .clock-hand {
+            position: absolute;
+            width: 2px;
+            height: 95px;
+            background-color: #3b82f6;
+            left: 120px;
+            top: 120px;
+            transform-origin: top center;
+            pointer-events: none;
+            z-index: 2;
+        }
+        .clock-hand-tip {
+            position: absolute;
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            background-color: rgba(59, 130, 246, 0.3);
+            border: 2px solid #3b82f6;
+            left: -16px;
+            top: 78px;
+            z-index: 3;
+        }
+        .clock-center-pivot {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: #3b82f6;
+            left: 116px;
+            top: 116px;
+            z-index: 4;
+        }
+        .clock-ampm-toggle {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .clock-ampm-btn {
+            font-size: 1rem;
+            padding: 5px 15px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: transparent;
+            color: #94a3b8;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .clock-ampm-btn.active {
+            background-color: #3b82f6;
+            color: #fff;
+            border-color: #3b82f6;
+        }
+
+        /* IFrame Embedded Styles */
+        body.embedded { background-color: transparent; }
+        body.embedded .main-container { margin: 15px auto; }
+        body.embedded #header-row { display: none !important; }
+        body.embedded #cloud-controls-card { display: none !important; }
+    </style>
+</head>
+<body>
+
+<div class="container main-container">
+    <div id="header-row" class="d-flex justify-content-between align-items-center mb-4">
+        <h3 class="m-0"><i class="fas fa-bed text-primary"></i> Sleep Journal</h3>
+        <button class="btn btn-outline-secondary btn-sm" onclick="openSettingsModal()">
+            <i class="fas fa-cog"></i> Settings
+        </button>
+    </div>
+
+    <!-- CLOUD CONTROLS -->
+    <div id="cloud-controls-card" class="card p-3 mb-3">
+        <div class="d-flex gap-2 justify-content-between align-items-center">
+            <div class="text-muted small">
+                <i class="fas fa-info-circle"></i> Log and store your daily sleep metrics.
+                <span id="syncStatus" class="badge bg-secondary ms-2">Ready to sync</span>
+            </div>
+            <div>
+                <button id="downloadBtn" class="btn btn-outline-primary btn-sm" onclick="loadFromCloud()">
+                    <i class="fas fa-cloud-download-alt"></i> Load
+                </button>
+                <button id="uploadBtn" class="btn btn-primary btn-sm" onclick="saveToCloud()">
+                    <i class="fas fa-cloud-upload-alt"></i> Save
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ADD ENTRY CARD -->
+    <div class="card p-4">
+        <h5 class="card-title text-primary mb-3">📝 Log Morning Sleep Journal</h5>
+        <div class="row g-3">
+            <div class="col-12 col-md-3">
+                <label class="form-label fw-bold">Date</label>
+                <input type="date" id="sleepDate" class="form-control">
+            </div>
+            <div class="col-6 col-md-2">
+                <label class="form-label fw-bold">Bed Time</label>
+                <input type="text" id="bedTimeInput" class="form-control cursor-pointer" placeholder="e.g. 11:00 PM" readonly onclick="triggerTimePicker('bed')">
+            </div>
+            <div class="col-6 col-md-2">
+                <label class="form-label fw-bold">Wake Time</label>
+                <input type="text" id="wakeTimeInput" class="form-control cursor-pointer" placeholder="e.g. 07:00 AM" readonly onclick="triggerTimePicker('wake')">
+            </div>
+            <div class="col-6 col-md-2">
+                <label class="form-label fw-bold">Sleep Hours</label>
+                <input type="number" id="totalHoursInput" class="form-control" step="0.1" placeholder="Auto">
+            </div>
+            <div class="col-6 col-md-3">
+                <label class="form-label fw-bold">Wake-ups (Count)</label>
+                <input type="number" id="wakeupsInput" class="form-control" value="0" min="0">
+            </div>
+
+            <div class="col-12 col-md-6">
+                <label class="form-label fw-bold">Morning Fatigue (1-10)</label>
+                <div class="d-flex align-items-center gap-3 mt-1">
+                    <input type="range" id="fatigueInput" class="form-range flex-grow-1" min="1" max="10" value="5" oninput="updateFatigueDisplay()">
+                    <span id="fatigueDisplayVal" class="fatigue-badge bg-fatigue-5">5</span>
+                </div>
+            </div>
+
+            <div class="col-12 col-md-6">
+                <label class="form-label fw-bold">Body Soreness? (Hips/Shoulders/Back)</label>
+                <div id="soreness-container" class="d-flex flex-wrap gap-2 mb-2">
+                    <span class="badge bg-light text-dark soreness-pill active" onclick="selectSoreness(this, 'No')">No</span>
+                    <span class="badge bg-light text-dark soreness-pill" onclick="selectSoreness(this, 'Sore Hips')">Sore Hips</span>
+                    <span class="badge bg-light text-dark soreness-pill" onclick="selectSoreness(this, 'Sore Shoulders')">Sore Shoulders</span>
+                    <span class="badge bg-light text-dark soreness-pill" onclick="selectSoreness(this, 'Minor back pain')">Minor back pain</span>
+                    <span class="badge bg-light text-dark soreness-pill" onclick="selectSoreness(this, 'Some back pain')">Some back pain</span>
+                </div>
+                <input type="text" id="sorenessCustom" class="form-control form-control-sm" placeholder="Enter custom soreness note...">
+            </div>
+
+            <div class="col-12">
+                <label class="form-label fw-bold">Notes (Temp, Caffeine, Stress)</label>
+                <textarea id="notesInput" class="form-control" rows="2" placeholder="Slept at home, room temp, stressful evening, caffeine before 3pm..."></textarea>
+            </div>
+
+            <div class="col-12 d-grid">
+                <button class="btn btn-primary" onclick="addSleepEntry()">
+                    <i class="fas fa-plus-circle"></i> Save Journal Entry
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- HISTORY LOGS -->
+    <div class="card">
+        <div class="card-header bg-light">
+            <h5 class="m-0 text-dark"><i class="fas fa-history text-muted"></i> Sleep History Log</h5>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th class="ps-4">Date</th>
+                        <th>Bed Time</th>
+                        <th>Wake Time</th>
+                        <th class="text-center">Total Hours</th>
+                        <th class="text-center">Wake-ups</th>
+                        <th>Soreness</th>
+                        <th class="text-center">Fatigue</th>
+                        <th style="width:25%;">Notes</th>
+                        <th class="text-end pe-4">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="historyList"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- CIRCULAR CLOCK TIME PICKER MODAL -->
+<div id="clockModal" class="modal fade" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered" style="max-width: 320px;">
+        <div class="modal-content clock-modal-content">
+            <div class="clock-header">
+                <span id="clock-hour-select" class="active" onclick="switchClockMode('hour')">12</span>:<span id="clock-minute-select" onclick="switchClockMode('minute')">00</span>
+            </div>
+            <div class="clock-ampm-toggle">
+                <button id="ampm-am-btn" class="clock-ampm-btn active" onclick="setClockAMPM('AM')">AM</button>
+                <button id="ampm-pm-btn" class="clock-ampm-btn" onclick="setClockAMPM('PM')">PM</button>
+            </div>
+            
+            <div class="clock-face-container" id="clockFaceContainer">
+                <div class="clock-face" id="clockFace">
+                    <!-- Numbers populated dynamically -->
+                </div>
+                <div class="clock-center-pivot"></div>
+                <div class="clock-hand">
+                    <div class="clock-hand-tip"></div>
+                </div>
+            </div>
+            
+            <div class="modal-footer border-0 justify-content-between px-4 pb-4 pt-0">
+                <button type="button" class="btn btn-outline-light btn-sm px-3" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary btn-sm px-4" onclick="applyTimeSelection()">Select</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- SETTINGS MODAL -->
+<div id="settingsModal" class="modal fade" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">☁️ Sleep Journal Sync Setup</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="small text-muted">Configure your Google Drive integration once to store and synchronize your sleep journal data.</p>
+                <div class="mb-3">
+                    <label class="form-label">Google Client ID</label>
+                    <input type="text" id="settingClientId" class="form-control" placeholder="Paste your OAuth 2.0 Web Client ID here">
+                </div>
+                <div class="d-grid mb-2">
+                    <button id="btn-sleep-signin" class="btn btn-outline-danger btn-sm" onclick="sleepInitiateSignIn()">
+                        <i class="fab fa-google me-2"></i> Connect Google Drive
+                    </button>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="saveSettings()">Save Configuration</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+    // --- APP STATE ---
+    let sleepLogs = JSON.parse(localStorage.getItem('sleepTracker_localData')) || [];
+    let hasUnsavedChanges = localStorage.getItem('sleepTracker_unsaved') === 'true';
+    const FILENAME = "sleep_tracker_data.json";
+
+    // Soreness pills selection
+    let activeSorenessVal = "No";
+
+    // Clock state variables
+    let activePickerField = null; // 'bed' or 'wake'
+    let selectedHour = 12;
+    let selectedMinute = 0;
+    let selectedAMPM = 'AM';
+    let currentClockMode = 'hour'; // 'hour' or 'minute'
+    let isDraggingHand = false;
+
+    // --- INITIALIZATION ---
+    document.addEventListener("DOMContentLoaded", () => {
+        if (window.self !== window.top) {
+            document.body.classList.add('embedded');
+        }
+
+        document.getElementById('sleepDate').valueAsDate = new Date();
+        loadSettings();
+        renderHistory();
+        updateSyncUI();
+
+        if (hasValidGDriveToken()) {
+            loadFromCloud();
+        } else {
+            if (window.self === window.top) {
+                openSettingsModal();
+            }
+        }
+
+        // Initialize clock face event listeners for click/drag
+        const container = document.getElementById('clockFaceContainer');
+        container.addEventListener('mousedown', startClockDrag);
+        container.addEventListener('mousemove', dragClockHand);
+        window.addEventListener('mouseup', stopClockDrag);
+        
+        container.addEventListener('touchstart', startClockDrag, { passive: true });
+        container.addEventListener('touchmove', dragClockHand, { passive: true });
+        window.addEventListener('touchend', stopClockDrag);
+    });
+
+    // --- SYNC UI LOGIC ---
+    function updateSyncUI() {
+        const uploadBtn = document.getElementById('uploadBtn');
+        const statusText = document.getElementById('syncStatus');
+
+        if (hasUnsavedChanges) {
+            uploadBtn.classList.remove('btn-primary');
+            uploadBtn.classList.add('btn-warning');
+            statusText.innerText = "⚠️ Unsaved changes";
+            statusText.className = "badge bg-warning text-dark ms-2";
+        } else {
+            uploadBtn.classList.remove('btn-warning');
+            uploadBtn.classList.add('btn-primary');
+            statusText.innerText = "Synced";
+            statusText.className = "badge bg-success ms-2";
+        }
+    }
+
+    // --- FORM INTERACTIONS ---
+    function selectSoreness(element, val) {
+        document.querySelectorAll('.soreness-pill').forEach(pill => pill.classList.remove('active'));
+        element.classList.add('active');
+        activeSorenessVal = val;
+        
+        if (val !== "No") {
+            document.getElementById('sorenessCustom').value = ""; // Clear custom text
+        }
+    }
+
+    function updateFatigueDisplay() {
+        const val = document.getElementById('fatigueInput').value;
+        const display = document.getElementById('fatigueDisplayVal');
+        display.innerText = val;
+        
+        // Remove old bg-fatigue classes
+        display.className = "fatigue-badge";
+        display.classList.add(`bg-fatigue-${val}`);
+    }
+
+    // Parse time into decimal hours
+    function timeToDecimal(timeStr) {
+        if (!timeStr) return 0;
+        const match = timeStr.match(/^(\d+):(\d+)\s*(AM|PM)?$/i);
+        if (!match) return 0;
+        
+        let hours = parseInt(match[1]);
+        const minutes = parseInt(match[2]);
+        const ampm = match[3];
+        
+        if (ampm) {
+            if (ampm.toUpperCase() === 'PM' && hours < 12) hours += 12;
+            if (ampm.toUpperCase() === 'AM' && hours === 12) hours = 0;
+        }
+        return hours + (minutes / 60);
+    }
+
+    // Calculate total hours between Bedtime and Waketime
+    function calculateSleepHours() {
+        const bedVal = document.getElementById('bedTimeInput').value;
+        const wakeVal = document.getElementById('wakeTimeInput').value;
+        
+        if (!bedVal || !wakeVal) return;
+
+        const bedDec = timeToDecimal(bedVal);
+        const wakeDec = timeToDecimal(wakeVal);
+
+        let duration = 0;
+        if (wakeDec < bedDec) {
+            duration = (24 - bedDec) + wakeDec;
+        } else {
+            duration = wakeDec - bedDec;
+        }
+
+        document.getElementById('totalHoursInput').value = duration.toFixed(1);
+    }
+
+    function addSleepEntry() {
+        const dateVal = document.getElementById('sleepDate').value;
+        const bedVal = document.getElementById('bedTimeInput').value;
+        const wakeVal = document.getElementById('wakeTimeInput').value;
+        const totalVal = document.getElementById('totalHoursInput').value;
+        const wakeupsVal = document.getElementById('wakeupsInput').value;
+        const customSoreness = document.getElementById('sorenessCustom').value.trim();
+        const fatigueVal = document.getElementById('fatigueInput').value;
+        const notesVal = document.getElementById('notesInput').value.trim();
+
+        if (!dateVal || !bedVal || !wakeVal || !totalVal) {
+            alert("Please fill in Date, Bed Time, Wake Time and Sleep Hours.");
+            return;
+        }
+
+        // Determine final soreness string
+        let finalSoreness = activeSorenessVal;
+        if (customSoreness) {
+            finalSoreness = customSoreness;
+        }
+
+        const entry = {
+            date: dateVal,
+            bedTime: bedVal,
+            wakeTime: wakeVal,
+            totalHours: parseFloat(totalVal),
+            wakeups: parseInt(wakeupsVal) || 0,
+            soreness: finalSoreness,
+            fatigue: parseInt(fatigueVal),
+            notes: notesVal
+        };
+
+        sleepLogs.push(entry);
+        
+        // Reset form inputs
+        document.getElementById('bedTimeInput').value = "";
+        document.getElementById('wakeTimeInput').value = "";
+        document.getElementById('totalHoursInput').value = "";
+        document.getElementById('wakeupsInput').value = "0";
+        document.getElementById('sorenessCustom').value = "";
+        document.getElementById('notesInput').value = "";
+        
+        // Reset soreness to "No"
+        const noPill = document.querySelector('.soreness-pill');
+        selectSoreness(noPill, 'No');
+        
+        // Reset fatigue to 5
+        document.getElementById('fatigueInput').value = 5;
+        updateFatigueDisplay();
+
+        saveDataAndMarkUnsaved();
+        renderHistory();
+    }
+
+    function deleteSleepEntry(index) {
+        if (confirm("Delete this entry?")) {
+            sleepLogs.splice(index, 1);
+            saveDataAndMarkUnsaved();
+            renderHistory();
+        }
+    }
+
+    function formatDisplayDate(dateStr) {
+        if (!dateStr) return "";
+        try {
+            const date = new Date(dateStr + 'T12:00:00');
+            const options = { weekday: 'short', day: 'numeric', month: 'short' };
+            return date.toLocaleDateString('en-GB', options);
+        } catch (e) {
+            return dateStr;
+        }
+    }
+
+    function renderHistory() {
+        const tbody = document.getElementById('historyList');
+        tbody.innerHTML = '';
+
+        // Sort: Newest logs first
+        const sortedLogs = [...sleepLogs].sort((a,b) => new Date(b.date) - new Date(a.date));
+
+        sortedLogs.forEach(entry => {
+            const originalIndex = sleepLogs.indexOf(entry);
+            const tr = document.createElement('tr');
+            
+            tr.innerHTML = `
+                <td class="ps-4 fw-bold">${formatDisplayDate(entry.date)}</td>
+                <td>${entry.bedTime}</td>
+                <td>${entry.wakeTime}</td>
+                <td class="text-center fw-bold text-primary">${entry.totalHours}h</td>
+                <td class="text-center">${entry.wakeups}</td>
+                <td>${entry.soreness}</td>
+                <td class="text-center">
+                    <span class="fatigue-badge bg-fatigue-${entry.fatigue}">${entry.fatigue}</span>
+                </td>
+                <td class="small text-muted text-truncate" style="max-width: 250px;" title="${entry.notes}">${entry.notes || '-'}</td>
+                <td class="text-end pe-4">
+                    <button class="btn btn-outline-danger btn-sm rounded-circle" onclick="deleteSleepEntry(${originalIndex})">
+                        <i class="fas fa-trash-alt"></i>
+                    </button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+
+        // Save local copy to let the parent dashboard widget access it
+        localStorage.setItem("sleepTracker_localData", JSON.stringify(sleepLogs));
+    }
+
+    function saveDataAndMarkUnsaved() {
+        localStorage.setItem('sleepTracker_localData', JSON.stringify(sleepLogs));
+        hasUnsavedChanges = true;
+        localStorage.setItem('sleepTracker_unsaved', 'true');
+        updateSyncUI();
+    }
+
+    // --- CIRCULAR TIME PICKER CODE ---
+    function triggerTimePicker(field) {
+        activePickerField = field;
+        
+        // Initial setup from current values if they exist
+        const currentVal = document.getElementById(`${field}TimeInput`).value;
+        if (currentVal) {
+            const match = currentVal.match(/^(\d+):(\d+)\s*(AM|PM)?$/i);
+            if (match) {
+                selectedHour = parseInt(match[1]);
+                selectedMinute = parseInt(match[2]);
+                selectedAMPM = match[3] || 'AM';
+            }
+        } else {
+            selectedHour = field === 'bed' ? 11 : 7;
+            selectedMinute = 0;
+            selectedAMPM = field === 'bed' ? 'PM' : 'AM';
+        }
+
+        switchClockMode('hour');
+        setClockAMPM(selectedAMPM);
+        updateDigitalDisplay();
+        
+        new bootstrap.Modal(document.getElementById('clockModal')).show();
+    }
+
+    function switchClockMode(mode) {
+        currentClockMode = mode;
+        
+        document.getElementById('clock-hour-select').className = mode === 'hour' ? 'active' : '';
+        document.getElementById('clock-minute-select').className = mode === 'minute' ? 'active' : '';
+        
+        renderClockNumbers();
+        
+        const deg = mode === 'hour' ? selectedHour * 30 : selectedMinute * 6;
+        updateClockHand(deg);
+    }
+
+    function renderClockNumbers() {
+        const clockFace = document.getElementById('clockFace');
+        clockFace.innerHTML = '';
+        const radius = 92;
+        
+        for (let i = 1; i <= 12; i++) {
+            const number = document.createElement('div');
+            number.className = 'clock-number';
+            const angle = (i * 30 - 90) * Math.PI / 180;
+            const x = Math.round(120 + radius * Math.cos(angle)) - 15;
+            const y = Math.round(120 + radius * Math.sin(angle)) - 15;
+            number.style.left = `${x}px`;
+            number.style.top = `${y}px`;
+            
+            if (currentClockMode === 'hour') {
+                number.innerText = i;
+                if (i === selectedHour) number.classList.add('active');
+            } else {
+                const minVal = (i * 5) % 60;
+                number.innerText = minVal.toString().padStart(2, '0');
+                if (minVal === selectedMinute) number.classList.add('active');
+            }
+            
+            clockFace.appendChild(number);
+        }
+    }
+
+    function updateClockHand(degrees) {
+        const hand = document.querySelector('.clock-hand');
+        hand.style.transform = `rotate(${degrees - 180}deg)`;
+    }
+
+    function setClockAMPM(ampm) {
+        selectedAMPM = ampm;
+        document.getElementById('ampm-am-btn').className = ampm === 'AM' ? 'clock-ampm-btn active' : 'clock-ampm-btn';
+        document.getElementById('ampm-pm-btn').className = ampm === 'PM' ? 'clock-ampm-btn active' : 'clock-ampm-btn';
+    }
+
+    function updateDigitalDisplay() {
+        document.getElementById('clock-hour-select').innerText = selectedHour;
+        document.getElementById('clock-minute-select').innerText = selectedMinute.toString().padStart(2, '0');
+    }
+
+    function startClockDrag(e) {
+        isDraggingHand = true;
+        dragClockHand(e);
+    }
+
+    function stopClockDrag() {
+        if (isDraggingHand) {
+            isDraggingHand = false;
+            // Switch mode automatically to minutes if hour was selected
+            if (currentClockMode === 'hour') {
+                setTimeout(() => switchClockMode('minute'), 300000); // Slight delay or immediately
+                switchClockMode('minute');
+            }
+        }
+    }
+
+    function dragClockHand(e) {
+        if (!isDraggingHand) return;
+        
+        const container = document.getElementById('clockFaceContainer');
+        const rect = container.getBoundingClientRect();
+        
+        const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+        const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+        if (!clientX || !clientY) return;
+
+        const x = clientX - rect.left - 120;
+        const y = clientY - rect.top - 120;
+
+        let angleRad = Math.atan2(y, x);
+        let angleDeg = angleRad * 180 / Math.PI + 90;
+        if (angleDeg < 0) angleDeg += 360;
+
+        if (currentClockMode === 'hour') {
+            let hour = Math.round(angleDeg / 30);
+            if (hour === 0) hour = 12;
+            selectedHour = hour;
+            updateClockHand(hour * 30);
+        } else {
+            // Minutes snap to 5-minute ticks if close, or just regular ticks
+            let minute = Math.round(angleDeg / 6) % 60;
+            selectedMinute = minute;
+            updateClockHand(minute * 6);
+        }
+        
+        updateDigitalDisplay();
+        renderClockNumbers(); // Highlight the new active selection
+    }
+
+    function applyTimeSelection() {
+        const timeString = `${selectedHour}:${selectedMinute.toString().padStart(2, '0')} ${selectedAMPM}`;
+        document.getElementById(`${activePickerField}TimeInput`).value = timeString;
+        
+        // Hide Modal
+        bootstrap.Modal.getInstance(document.getElementById('clockModal')).hide();
+        
+        // Auto-calculate hours
+        calculateSleepHours();
+    }
+
+    // --- GOOGLE DRIVE STORAGE INTEGRATION ---
+    function hasValidGDriveToken() {
+        const token = localStorage.getItem("gdrive_access_token");
+        const expires = localStorage.getItem("gdrive_token_expires_at");
+        return token && expires && Date.now() < parseInt(expires);
+    }
+
+    function getAccessToken() {
+        const token = localStorage.getItem("gdrive_access_token");
+        const expiresAt = localStorage.getItem("gdrive_token_expires_at");
+        if (token && expiresAt && Date.now() < parseInt(expiresAt)) {
+            return token;
+        }
+        return null;
+    }
+
+    async function gdriveRequest(url, options = {}) {
+        const token = getAccessToken();
+        if (!token) {
+            throw new Error("Unauthorized: Please sign in to Google Drive in the Dashboard Settings.");
+        }
+        options.headers = options.headers || {};
+        options.headers["Authorization"] = `Bearer ${token}`;
+        
+        const response = await fetch(url, options);
+        if (response.status === 401) {
+            localStorage.removeItem("gdrive_access_token");
+            throw new Error("Google Drive session expired. Please sign in again.");
+        }
+        if (response.status === 404) {
+            localStorage.removeItem(`gdrive_fileid_${FILENAME}`);
+            localStorage.removeItem("gdrive_folderid_appdata");
+        }
+        if (!response.ok) {
+            const errText = await response.text();
+            throw new Error(`Google Drive API error: ${response.status} - ${errText}`);
+        }
+        return response;
+    }
+
+    async function getAppDataFolderId() {
+        const cachedFolderId = localStorage.getItem("gdrive_folderid_appdata");
+        if (cachedFolderId) return cachedFolderId;
+
+        const url = `https://www.googleapis.com/drive/v3/files?q=name='App+Data'+and+mimeType='application/vnd.google-apps.folder'+and+trashed=false&fields=files(id)`;
+        const response = await gdriveRequest(url);
+        const data = await response.json();
+        
+        if (data.files && data.files.length > 0) {
+            const folderId = data.files[0].id;
+            localStorage.setItem("gdrive_folderid_appdata", folderId);
+            return folderId;
+        }
+        
+        const createUrl = "https://www.googleapis.com/drive/v3/files";
+        const createResponse = await gdriveRequest(createUrl, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                name: "App Data",
+                mimeType: "application/vnd.google-apps.folder"
+            })
+        });
+        const folderData = await createResponse.json();
+        localStorage.setItem("gdrive_folderid_appdata", folderData.id);
+        return folderData.id;
+    }
+
+    async function getFileId(filename, defaultContent = "[]") {
+        const cachedFileId = localStorage.getItem(`gdrive_fileid_${filename}`);
+        if (cachedFileId) return cachedFileId;
+
+        const folderId = await getAppDataFolderId();
+        
+        const url = `https://www.googleapis.com/drive/v3/files?q=name='${filename}'+and+'${folderId}'+in+parents+and+trashed=false&fields=files(id)`;
+        const response = await gdriveRequest(url);
+        const data = await response.json();
+
+        if (data.files && data.files.length > 0) {
+            const fileId = data.files[0].id;
+            localStorage.setItem(`gdrive_fileid_${filename}`, fileId);
+            return fileId;
+        }
+
+        const metadata = {
+            name: filename,
+            mimeType: "application/json",
+            parents: [folderId]
+        };
+
+        const boundary = "gdrive_multipart_boundary";
+        const delimiter = `\r\n--${boundary}\r\n`;
+        const closeDelimiter = `\r\n--${boundary}--`;
+
+        const body = 
+            delimiter +
+            'Content-Type: application/json; charset=UTF-8\r\n\r\n' +
+            JSON.stringify(metadata) +
+            delimiter +
+            'Content-Type: application/json\r\n\r\n' +
+            defaultContent +
+            closeDelimiter;
+
+        const uploadUrl = "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart";
+        const uploadResponse = await gdriveRequest(uploadUrl, {
+            method: "POST",
+            headers: {
+                "Content-Type": `multipart/related; boundary=${boundary}`
+            },
+            body: body
+        });
+        const uploadData = await uploadResponse.json();
+        localStorage.setItem(`gdrive_fileid_${filename}`, uploadData.id);
+        return uploadData.id;
+    }
+
+    // --- CLOUD SYNC LOGIC ---
+    async function loadFromCloud() {
+        if (!hasValidGDriveToken()) {
+            if (window.self === window.top) {
+                alert("Please connect Google Drive in Settings first.");
+            }
+            return;
+        }
+
+        const statusText = document.getElementById('syncStatus');
+        statusText.innerText = "⏳ Downloading...";
+        statusText.className = "badge bg-info ms-2";
+
+        try {
+            const fileId = await getFileId(FILENAME);
+            const response = await gdriveRequest(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`);
+            const data = await response.json();
+            
+            sleepLogs = Array.isArray(data) ? data : (data.record || []);
+            
+            hasUnsavedChanges = false;
+            localStorage.removeItem('sleepTracker_unsaved');
+            
+            localStorage.setItem('sleepTracker_localData', JSON.stringify(sleepLogs));
+            renderHistory();
+            updateSyncUI();
+        } catch (error) {
+            console.error(error);
+            statusText.innerText = "❌ Error fetching";
+            statusText.className = "badge bg-danger ms-2";
+        }
+    }
+
+    async function saveToCloud() {
+        if (!hasValidGDriveToken()) {
+            alert("Please connect Google Drive in Settings first.");
+            return;
+        }
+
+        const statusText = document.getElementById('syncStatus');
+        statusText.innerText = "⏳ Uploading...";
+        statusText.className = "badge bg-info ms-2";
+
+        try {
+            const fileId = await getFileId(FILENAME);
+            await gdriveRequest(`https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=media`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(sleepLogs)
+            });
+
+            hasUnsavedChanges = false;
+            localStorage.removeItem('sleepTracker_unsaved');
+            updateSyncUI();
+            if (window.self === window.top) {
+                alert("Saved to cloud successfully!");
+            }
+        } catch (error) {
+            console.error(error);
+            statusText.innerText = "❌ Upload Failed";
+            statusText.className = "badge bg-danger ms-2";
+        }
+    }
+
+    // --- STANDALONE SETTINGS ---
+    function openSettingsModal() {
+        const cliId = localStorage.getItem("gdrive_clientId") || "";
+        document.getElementById('settingClientId').value = cliId;
+        
+        const signInBtn = document.getElementById("btn-sleep-signin");
+        if (hasValidGDriveToken()) {
+            signInBtn.innerText = "Google Drive Connected";
+            signInBtn.className = "btn btn-outline-success btn-sm";
+        } else {
+            signInBtn.innerText = "Connect Google Drive";
+            signInBtn.className = "btn btn-outline-danger btn-sm";
+        }
+
+        const modalEl = document.getElementById('settingsModal');
+        let modalInstance = bootstrap.Modal.getInstance(modalEl);
+        if (!modalInstance) modalInstance = new bootstrap.Modal(modalEl);
+        modalInstance.show();
+    }
+
+    function sleepInitiateSignIn() {
+        const cliId = document.getElementById('settingClientId').value.trim();
+        if (!cliId) return alert("Please enter a Client ID");
+        
+        localStorage.setItem("gdrive_clientId", cliId);
+
+        try {
+            const client = google.accounts.oauth2.initTokenClient({
+                client_id: cliId,
+                scope: 'https://www.googleapis.com/auth/drive.file',
+                callback: (response) => {
+                    if (response.error !== undefined) {
+                        alert("Google login failed: " + response.error);
+                        return;
+                    }
+                    const expiresAt = Date.now() + (response.expires_in * 1000);
+                    localStorage.setItem("gdrive_access_token", response.access_token);
+                    localStorage.setItem("gdrive_token_expires_at", expiresAt);
+                    alert("Connected to Google Drive!");
+                    openSettingsModal(); // Refresh view
+                    loadFromCloud();
+                }
+            });
+            client.requestAccessToken({ prompt: 'consent' });
+        } catch (e) {
+            console.error(e);
+            alert("Could not load Google authentication");
+        }
+    }
+
+    function saveSettings() {
+        const cliId = document.getElementById('settingClientId').value.trim();
+        localStorage.setItem("gdrive_clientId", cliId);
+        
+        bootstrap.Modal.getInstance(document.getElementById('settingsModal')).hide();
+        if (hasValidGDriveToken()) {
+            loadFromCloud();
+        }
+    }
+</script>
+</body>
+</html>
