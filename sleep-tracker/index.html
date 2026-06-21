@@ -368,7 +368,9 @@
             document.body.classList.add('embedded');
         }
 
-        document.getElementById('sleepDate').valueAsDate = new Date();
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+        document.getElementById('sleepDate').valueAsDate = yesterday;
         loadSettings();
 
         // Load seed data if local storage is empty
