@@ -239,8 +239,8 @@
             <div class="col-12 col-md-3">
                 <label class="form-label fw-bold">Medication & Dose</label>
                 <select id="medicationSelect" class="form-select">
+                    <option value="Elvanse 50mg" selected>Elvanse (50mg)</option>
                     <option value="Elvanse 30mg">Elvanse (30mg)</option>
-                    <option value="Elvanse 50mg">Elvanse (50mg)</option>
                     <option value="Amfexa">Amfexa</option>
                     <option value="None / Coffee">None / Coffee</option>
                     <option value="Other">Other</option>
@@ -507,6 +507,15 @@
         activeFrictionVal = selectVal;
     }
 
+    function mergeTimes(t1, t2) {
+        if (!t1) return t2;
+        if (!t2) return t1;
+        const parts1 = t1.split(' / ').map(p => p.trim());
+        const parts2 = t2.split(' / ').map(p => p.trim());
+        const combined = [...new Set([...parts1, ...parts2])];
+        return combined.join(' / ');
+    }
+
     function addAdhdEntry() {
         const dateVal = document.getElementById('logDate').value;
         const medSelect = document.getElementById('medicationSelect').value;
@@ -530,17 +539,59 @@
             medication = customMed;
         }
 
-        const entry = {
-            date: dateVal,
-            medication: medication,
-            timeTaken: timeTaken,
-            kickedIn: kickedIn,
-            woreOff: woreOff,
-            friction: activeFrictionVal,
-            notes: notes
-        };
-
-        adhdLogs.push(entry);
+        const existingIndex = adhdLogs.findIndex(item => item.date === dateVal);
+        if (existingIndex !== -1) {
+            // Merge entries!
+            const existing = adhdLogs[existingIndex];
+            
+            // Merge medication names
+            if (existing.medication !== medication) {
+                if (existing.medication === "None / Coffee") {
+                    existing.medication = medication;
+                } else if (medication === "None / Coffee") {
+                    // keep existing
+                } else {
+                    existing.medication = `${existing.medication} + ${medication}`;
+                }
+            }
+            
+            // Merge timeTaken (split format)
+            if (timeTaken) {
+                existing.timeTaken = mergeTimes(existing.timeTaken, timeTaken);
+            }
+            
+            // Merge kickedIn and woreOff as overall timings
+            if (kickedIn && !existing.kickedIn) {
+                existing.kickedIn = kickedIn;
+            }
+            if (woreOff) {
+                existing.woreOff = woreOff; // Use the latest woreOff
+            }
+            
+            // Merge friction
+            if (activeFrictionVal !== null) {
+                existing.friction = activeFrictionVal;
+            }
+            
+            // Merge notes
+            if (notes) {
+                existing.notes = [existing.notes, notes].filter(Boolean).join('; ');
+            }
+            
+            alert(`Merged with existing entry for ${formatDisplayDate(dateVal)}!`);
+        } else {
+            // Add new entry
+            const entry = {
+                date: dateVal,
+                medication: medication,
+                timeTaken: timeTaken,
+                kickedIn: kickedIn,
+                woreOff: woreOff,
+                friction: activeFrictionVal,
+                notes: notes
+            };
+            adhdLogs.push(entry);
+        }
         
         // Reset fields
         document.getElementById('timeTakenInput').value = "";
@@ -548,7 +599,7 @@
         document.getElementById('woreOffInput').value = "";
         document.getElementById('notesInput').value = "";
         document.getElementById('medicationCustom').value = "";
-        document.getElementById('medicationSelect').value = "Elvanse 30mg";
+        document.getElementById('medicationSelect').value = "Elvanse 50mg"; // default
         document.getElementById('medicationCustomContainer').style.display = 'none';
         selectFriction(1);
 
@@ -625,10 +676,18 @@
     function triggerTimePicker(field) {
         activePickerField = field;
         
+        // Only timeTaken supports split dose picker
+        const twiceDailyContainer = document.getElementById('twice-daily-container');
+        if (field === 'timeTaken') {
+            twiceDailyContainer.style.setProperty('display', 'flex', 'important');
+        } else {
+            twiceDailyContainer.style.setProperty('display', 'none', 'important');
+        }
+
         // Initial setup from current values if they exist
         const currentVal = document.getElementById(`${field}Input`).value;
         
-        isSplitMode = currentVal.includes(' / ');
+        isSplitMode = field === 'timeTaken' && currentVal.includes(' / ');
         document.getElementById('splitDoseToggle').checked = isSplitMode;
         
         const slotTabs = document.getElementById('clock-slot-tabs');
@@ -644,7 +703,6 @@
             parseTimeToSlot(splitParts[1], 2);
         } else if (currentVal) {
             parseTimeToSlot(currentVal, 1);
-            // Set reasonable default for slot 2
             slots[2] = { hour: 2, minute: 0, ampm: 'PM' };
         } else {
             // Default times based on input field
@@ -762,6 +820,7 @@
         hand.style.transform = `rotate(${degrees - 180}deg)`;
     }
 
+    // AM/PM buttons
     function setClockAMPM(ampm) {
         slots[activeSlot].ampm = ampm;
         document.getElementById('ampm-am-btn').className = ampm === 'AM' ? 'clock-ampm-btn active' : 'clock-ampm-btn';
@@ -828,7 +887,7 @@
         };
 
         let result = formatTime(slots[1]);
-        if (isSplitMode) {
+        if (isSplitMode && activePickerField === 'timeTaken') {
             result += ` / ${formatTime(slots[2])}`;
         }
 
@@ -1072,6 +1131,7 @@
         }
     }
 
+    // Save Settings
     function saveSettings() {
         const cliId = document.getElementById('settingClientId').value.trim();
         localStorage.setItem("gdrive_clientId", cliId);
