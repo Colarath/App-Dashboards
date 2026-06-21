@@ -363,13 +363,32 @@
     let isDraggingHand = false;
 
     // --- INITIALIZATION ---
-    document.addEventListener("DOMContentLoaded", () => {
+    document.addEventListener("DOMContentLoaded", async () => {
         if (window.self !== window.top) {
             document.body.classList.add('embedded');
         }
 
         document.getElementById('sleepDate').valueAsDate = new Date();
         loadSettings();
+
+        // Load seed data if local storage is empty
+        if (sleepLogs.length === 0) {
+            try {
+                const response = await fetch('sleep_tracker_data.json');
+                if (response.ok) {
+                    const data = await response.json();
+                    if (Array.isArray(data) && data.length > 0) {
+                        sleepLogs = data;
+                        localStorage.setItem('sleepTracker_localData', JSON.stringify(sleepLogs));
+                        hasUnsavedChanges = true;
+                        localStorage.setItem('sleepTracker_unsaved', 'true');
+                    }
+                }
+            } catch (e) {
+                console.log("No local sleep_tracker_data.json found or failed to parse, starting clean.", e);
+            }
+        }
+
         renderHistory();
         updateSyncUI();
 
