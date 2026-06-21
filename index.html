@@ -984,6 +984,51 @@
             }
         }
 
+        function attemptSilentTokenRefresh() {
+            const storedClientId = localStorage.getItem("gdrive_clientId");
+            if (!storedClientId) return;
+
+            if (typeof google === 'undefined' || !google.accounts || !google.accounts.oauth2) {
+                setTimeout(attemptSilentTokenRefresh, 200);
+                return;
+            }
+
+            try {
+                const client = google.accounts.oauth2.initTokenClient({
+                    client_id: storedClientId,
+                    scope: 'https://www.googleapis.com/auth/drive.file',
+                    callback: (response) => {
+                        if (response.error !== undefined) {
+                            console.log("Silent token refresh failed/requires consent:", response.error);
+                            return;
+                        }
+                        
+                        const expiresAt = Date.now() + (response.expires_in * 1000);
+                        localStorage.setItem("gdrive_access_token", response.access_token);
+                        localStorage.setItem("gdrive_token_expires_at", expiresAt);
+                        
+                        console.log("Access token silently refreshed successfully!");
+                        updateGDriveStatusUI();
+                        
+                        // Reload all active frames to let them load the updated token and sync down
+                        document.getElementById("frame-work").contentWindow.location.reload();
+                        document.getElementById("frame-friend").contentWindow.location.reload();
+                        document.getElementById("frame-food").contentWindow.location.reload();
+                        document.getElementById("frame-sleep").contentWindow.location.reload();
+                        document.getElementById("frame-adhd").contentWindow.location.reload();
+                        setTimeout(loadDashboardWidgets, 1000);
+
+                        // Schedule the next silent refresh 5 minutes before this one expires
+                        const nextRefreshMs = Math.max(5000, (response.expires_in * 1000) - 5 * 60 * 1000);
+                        setTimeout(attemptSilentTokenRefresh, nextRefreshMs);
+                    }
+                });
+                client.requestAccessToken({ prompt: '' });
+            } catch (e) {
+                console.error("Silent token refresh initialization failed:", e);
+            }
+        }
+
         function initiateGoogleDriveSignIn() {
             clientId = document.getElementById("settings-clientId").value.trim();
             if (!clientId) {
@@ -1287,6 +1332,16 @@
 
         window.addEventListener('load', () => {
             loadDashboardWidgets();
+            
+            // Attempt silent token refresh if we have a client ID but no valid token
+            if (!hasValidGDriveToken()) {
+                attemptSilentTokenRefresh();
+            } else {
+                const expiresAt = localStorage.getItem("gdrive_token_expires_at");
+                const timeRemaining = parseInt(expiresAt) - Date.now();
+                const refreshDelay = Math.max(5000, timeRemaining - 5 * 60 * 1000);
+                setTimeout(attemptSilentTokenRefresh, refreshDelay);
+            }
             
             // Periodically refresh widgets and unsaved status in background
             setInterval(() => {
