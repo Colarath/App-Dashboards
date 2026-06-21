@@ -419,6 +419,22 @@
                             </div>
                         </div>
                     </div>
+
+                    <!-- AWAITING RESPONSE WIDGET -->
+                    <div class="col-12 col-lg-6">
+                        <div class="widget-card">
+                            <div class="widget-header">
+                                <h5><i class="fas fa-reply text-danger me-2"></i> Awaiting Your Response</h5>
+                                <button class="btn btn-link btn-sm text-decoration-none" onclick="switchTab('friend')">View All</button>
+                            </div>
+                            <div class="widget-body">
+                                <div id="widget-response-list" class="list-group list-group-flush">
+                                    <!-- Populated dynamically -->
+                                    <div class="text-center text-muted py-3">No one awaiting response.</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
             </div>
@@ -563,6 +579,7 @@
             loadWorkWidgetData();
             loadFriendWidgetData();
             loadFoodWidgetData();
+            loadResponseWidgetData();
         }
 
         function loadWorkWidgetData() {
@@ -747,6 +764,51 @@
                 console.error(e);
                 statVal.innerText = "Error";
                 widgetList.innerHTML = '<div class="text-center text-danger py-3">Error loading food data.</div>';
+            }
+        }
+
+        function loadResponseWidgetData() {
+            const widgetList = document.getElementById('widget-response-list');
+            const cachedData = localStorage.getItem("myFriendTracker");
+            if (!cachedData) {
+                widgetList.innerHTML = '<div class="text-center text-muted py-3">No one awaiting response.</div>';
+                return;
+            }
+
+            try {
+                const friends = JSON.parse(cachedData);
+                if (!Array.isArray(friends) || friends.length === 0) {
+                    widgetList.innerHTML = '<div class="text-center text-muted py-3">No one awaiting response.</div>';
+                    return;
+                }
+
+                const awaiting = friends.filter(f => f.needsResponse);
+
+                if (awaiting.length === 0) {
+                    widgetList.innerHTML = '<div class="text-center text-success py-3"><i class="fas fa-check-circle"></i> No one awaiting response!</div>';
+                    return;
+                }
+
+                widgetList.innerHTML = '';
+                awaiting.forEach(friend => {
+                    const originalIndex = friends.findIndex(f => f.name === friend.name);
+                    
+                    const div = document.createElement('div');
+                    div.className = 'list-group-item d-flex justify-content-between align-items-center py-3 border-0 border-bottom';
+                    div.innerHTML = `
+                        <div>
+                            <div class="fw-bold text-dark">${friend.name}</div>
+                            <div class="small text-muted">Awaiting reply since your last contact</div>
+                        </div>
+                        <button class="btn btn-outline-danger btn-sm rounded-pill px-3" onclick="goToFriendContact(${originalIndex})">
+                            <i class="fas fa-comment-dots"></i> Reply & Log
+                        </button>
+                    `;
+                    widgetList.appendChild(div);
+                });
+            } catch (e) {
+                console.error(e);
+                widgetList.innerHTML = '<div class="text-center text-danger py-3">Error loading response alerts.</div>';
             }
         }
 
