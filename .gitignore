@@ -2,3 +2,5 @@ repos/
 .gemini/
 ADHD Journal.md
 Sleep Journal.md
+sleep-tracker/sleep_tracker_data.json
+adhd-tracker/adhd_tracker_data.json
