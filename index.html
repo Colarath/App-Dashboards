@@ -236,6 +236,12 @@
             padding: 24px;
         }
 
+        .active-widget-tab {
+            color: #0d6efd !important;
+            background-color: #fff;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+        }
+
         .monospace { font-family: monospace; }
 
         /* Mobile Hamburger */
@@ -477,9 +483,17 @@
                                 <button class="btn btn-link btn-sm text-decoration-none" onclick="switchTab('friend')">View All</button>
                             </div>
                             <div class="widget-body">
+                                <div class="d-flex border-bottom mb-2 bg-light rounded p-1" style="font-size: 0.85rem; max-width: fit-content;">
+                                    <button class="btn btn-sm btn-link text-decoration-none fw-bold me-2 px-2 py-1 active-widget-tab" id="widgetTabContact" onclick="switchWidgetSubTab('contact')" style="font-size: 0.75rem;">Overdue</button>
+                                    <button class="btn btn-sm btn-link text-decoration-none text-muted fw-bold px-2 py-1" id="widgetTabBirthday" onclick="switchWidgetSubTab('birthday')" style="font-size: 0.75rem;">Birthdays (14d)</button>
+                                </div>
                                 <div id="widget-friends-list" class="list-group list-group-flush">
                                     <!-- Populated dynamically -->
                                     <div class="text-center text-muted py-3">No friends needing contact!</div>
+                                </div>
+                                <div id="widget-birthdays-list" class="list-group list-group-flush d-none">
+                                    <!-- Populated dynamically -->
+                                    <div class="text-center text-muted py-3">No upcoming birthdays!</div>
                                 </div>
                             </div>
                         </div>
@@ -738,14 +752,41 @@
             }
         }
 
+        let currentWidgetSubTab = 'contact';
+        function switchWidgetSubTab(tab) {
+            currentWidgetSubTab = tab;
+            const tabContact = document.getElementById('widgetTabContact');
+            const tabBirthday = document.getElementById('widgetTabBirthday');
+            const listContact = document.getElementById('widget-friends-list');
+            const listBirthday = document.getElementById('widget-birthdays-list');
+            
+            if (tab === 'contact') {
+                tabContact.classList.add('active-widget-tab');
+                tabContact.classList.remove('text-muted');
+                tabBirthday.classList.remove('active-widget-tab');
+                tabBirthday.classList.add('text-muted');
+                listContact.classList.remove('d-none');
+                listBirthday.classList.add('d-none');
+            } else {
+                tabBirthday.classList.add('active-widget-tab');
+                tabBirthday.classList.remove('text-muted');
+                tabContact.classList.remove('active-widget-tab');
+                tabContact.classList.add('text-muted');
+                listContact.classList.add('d-none');
+                listBirthday.classList.remove('d-none');
+            }
+        }
+
         function loadFriendWidgetData() {
             const statVal = document.getElementById('stat-friends-count');
             const widgetList = document.getElementById('widget-friends-list');
+            const bdayList = document.getElementById('widget-birthdays-list');
 
             const cachedData = localStorage.getItem("myFriendTracker");
             if (!cachedData) {
                 statVal.innerText = "0";
                 widgetList.innerHTML = '<div class="text-center text-muted py-3">No friends tracked yet.</div>';
+                bdayList.innerHTML = '<div class="text-center text-muted py-3">No upcoming birthdays.</div>';
                 return;
             }
 
@@ -754,59 +795,136 @@
                 if (!Array.isArray(friends) || friends.length === 0) {
                     statVal.innerText = "0";
                     widgetList.innerHTML = '<div class="text-center text-muted py-3">No friends tracked yet.</div>';
+                    bdayList.innerHTML = '<div class="text-center text-muted py-3">No upcoming birthdays.</div>';
                     return;
                 }
 
                 statVal.innerText = friends.length;
 
-                // Find friends needing contact (Never contacted, or >14 days ago)
+                // 1. Find friends needing contact (evaluating custom cadence)
                 const now = new Date();
                 const needingContact = [];
 
                 friends.forEach((friend, idx) => {
+                    // Check cadence threshold
+                    let thresholdDays = 14; // Default fallback
+                    if (friend.cadence === 'weekly') thresholdDays = 7;
+                    else if (friend.cadence === 'biweekly') thresholdDays = 14;
+                    else if (friend.cadence === 'monthly') thresholdDays = 30;
+                    else if (friend.cadence === 'quarterly') thresholdDays = 90;
+                    else if (friend.cadence === 'biannually') thresholdDays = 180;
+                    else if (friend.cadence === 'none') return; // Ignore if set to 'none'
+
                     if (!friend.lastContact || friend.lastContact === 'Never') {
-                        needingContact.push({ friend, idx, daysAgo: Infinity });
+                        needingContact.push({ friend, idx, daysAgo: Infinity, overdueBy: Infinity });
                     } else {
                         const lastDate = new Date(friend.lastContact + 'T12:00:00');
-                        const diffTime = Math.abs(now - lastDate);
+                        const diffTime = now - lastDate;
                         const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-                        if (diffDays > 14) {
-                            needingContact.push({ friend, idx, daysAgo: diffDays });
+                        if (diffDays > thresholdDays) {
+                            needingContact.push({ friend, idx, daysAgo: diffDays, overdueBy: diffDays - thresholdDays });
                         }
                     }
                 });
 
                 if (needingContact.length === 0) {
                     widgetList.innerHTML = '<div class="text-center text-success py-3"><i class="fas fa-check-circle"></i> Everyone is up to date!</div>';
-                    return;
+                } else {
+                    // Sort: Never first, then highest overdueBy
+                    needingContact.sort((a, b) => {
+                        if (a.overdueBy === Infinity) return -1;
+                        if (b.overdueBy === Infinity) return 1;
+                        return b.overdueBy - a.overdueBy;
+                    });
+                    
+                    widgetList.innerHTML = '';
+                    needingContact.slice(0, 4).forEach(item => {
+                        const statusText = item.daysAgo === Infinity ? 'Never' : `${item.daysAgo} days ago`;
+                        const badgeClass = item.daysAgo === Infinity ? 'bg-danger text-white' : 'bg-warning text-dark';
+                        
+                        const div = document.createElement('div');
+                        div.className = 'list-group-item d-flex justify-content-between align-items-center py-3 border-0 border-bottom';
+                        div.innerHTML = `
+                            <div>
+                                <div class="fw-bold text-dark">${item.friend.name}</div>
+                                <div class="small text-muted">Last contact: <span class="badge ${badgeClass}">${statusText}</span></div>
+                            </div>
+                            <button class="btn btn-outline-primary btn-sm rounded-pill px-3" onclick="goToFriendContact(${item.idx})">
+                                <i class="fas fa-comment-dots"></i> Log Contact
+                            </button>
+                        `;
+                        widgetList.appendChild(div);
+                    });
                 }
 
-                // Sort: Never first, then highest days ago
-                needingContact.sort((a, b) => b.daysAgo - a.daysAgo);
-                
-                widgetList.innerHTML = '';
-                needingContact.slice(0, 4).forEach(item => {
-                    const statusText = item.daysAgo === Infinity ? 'Never' : `${item.daysAgo} days ago`;
-                    const badgeClass = item.daysAgo === Infinity ? 'bg-danger text-white' : 'bg-warning text-dark';
+                // 2. Find upcoming birthdays (next 14 days)
+                const upcomingBirthdays = [];
+                const currentYear = now.getFullYear();
+
+                friends.forEach((friend, idx) => {
+                    if (!friend.birthday) return;
                     
-                    const div = document.createElement('div');
-                    div.className = 'list-group-item d-flex justify-content-between align-items-center py-3 border-0 border-bottom';
-                    div.innerHTML = `
-                        <div>
-                            <div class="fw-bold text-dark">${item.friend.name}</div>
-                            <div class="small text-muted">Last contact: <span class="badge ${badgeClass}">${statusText}</span></div>
-                        </div>
-                        <button class="btn btn-outline-primary btn-sm rounded-pill px-3" onclick="goToFriendContact(${item.idx})">
-                            <i class="fas fa-comment-dots"></i> Log Contact
-                        </button>
-                    `;
-                    widgetList.appendChild(div);
+                    // Parse birthday (YYYY-MM-DD or MM-DD)
+                    const parts = friend.birthday.split('-');
+                    let month = 0;
+                    let day = 0;
+                    if (parts.length === 3) {
+                        month = parseInt(parts[1], 10) - 1;
+                        day = parseInt(parts[2], 10);
+                    } else if (parts.length === 2) {
+                        month = parseInt(parts[0], 10) - 1;
+                        day = parseInt(parts[1], 10);
+                    } else {
+                        return;
+                    }
+
+                    // Check birthday in current year, and next year (in case we are at late Dec)
+                    let bdayThisYear = new Date(currentYear, month, day, 12, 0, 0);
+                    let diffTime = bdayThisYear - now;
+                    let diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+                    // If birthday has passed this year, check next year
+                    if (diffDays < 0) {
+                        const bdayNextYear = new Date(currentYear + 1, month, day, 12, 0, 0);
+                        diffTime = bdayNextYear - now;
+                        diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                    }
+
+                    if (diffDays >= 0 && diffDays <= 14) {
+                        upcomingBirthdays.push({ friend, idx, daysLeft: diffDays, dateStr: `${month + 1}/${day}` });
+                    }
                 });
+
+                if (upcomingBirthdays.length === 0) {
+                    bdayList.innerHTML = '<div class="text-center text-muted py-3">No birthdays in the next 14 days.</div>';
+                } else {
+                    upcomingBirthdays.sort((a, b) => a.daysLeft - b.daysLeft);
+                    
+                    bdayList.innerHTML = '';
+                    upcomingBirthdays.slice(0, 4).forEach(item => {
+                        const daysText = item.daysLeft === 0 ? 'Today! 🎂' : `in ${item.daysLeft} days`;
+                        const badgeClass = item.daysLeft === 0 ? 'bg-danger text-white' : 'bg-info text-dark';
+                        
+                        const div = document.createElement('div');
+                        div.className = 'list-group-item d-flex justify-content-between align-items-center py-3 border-0 border-bottom';
+                        div.innerHTML = `
+                            <div>
+                                <div class="fw-bold text-dark">${item.friend.name}</div>
+                                <div class="small text-muted">Birthday: <span class="badge ${badgeClass}">${item.dateStr} (${daysText})</span></div>
+                            </div>
+                            <button class="btn btn-outline-success btn-sm rounded-pill px-3" onclick="goToFriendContact(${item.idx})">
+                                <i class="fas fa-gift"></i> Wish Them
+                            </button>
+                        `;
+                        bdayList.appendChild(div);
+                    });
+                }
 
             } catch (e) {
                 console.error(e);
                 statVal.innerText = "Error";
                 widgetList.innerHTML = '<div class="text-center text-danger py-3">Error loading friend data.</div>';
+                bdayList.innerHTML = '<div class="text-center text-danger py-3">Error loading birthdays.</div>';
             }
         }
 
