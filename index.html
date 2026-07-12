@@ -849,7 +849,7 @@
                                 <div class="fw-bold text-dark">${item.friend.name}</div>
                                 <div class="small text-muted">Last contact: <span class="badge ${badgeClass}">${statusText}</span></div>
                             </div>
-                            <button class="btn btn-outline-primary btn-sm rounded-pill px-3" onclick="goToFriendContact(${item.idx})">
+                            <button class="btn btn-outline-primary btn-sm rounded-pill px-3" onclick="goToFriendContact('${item.friend.id || ''}', '${item.friend.name.replace(/'/g, "\\'")}', ${item.idx})">
                                 <i class="fas fa-comment-dots"></i> Log Contact
                             </button>
                         `;
@@ -912,7 +912,7 @@
                                 <div class="fw-bold text-dark">${item.friend.name}</div>
                                 <div class="small text-muted">Birthday: <span class="badge ${badgeClass}">${item.dateStr} (${daysText})</span></div>
                             </div>
-                            <button class="btn btn-outline-success btn-sm rounded-pill px-3" onclick="goToFriendContact(${item.idx})">
+                            <button class="btn btn-outline-success btn-sm rounded-pill px-3" onclick="goToFriendContact('${item.friend.id || ''}', '${item.friend.name.replace(/'/g, "\\'")}', ${item.idx})">
                                 <i class="fas fa-gift"></i> Wish Them
                             </button>
                         `;
@@ -1101,12 +1101,14 @@
         }
 
         // --- DASHBOARD ACTIONS ---
-        function goToFriendContact(friendIndex) {
+        function goToFriendContact(friendId, friendName, friendIndex) {
             switchTab('friend');
             setTimeout(() => {
                 const friendFrame = document.getElementById("frame-friend").contentWindow;
-                if (friendFrame && typeof friendFrame.openNoteModal === 'function') {
-                    friendFrame.openNoteModal(friendIndex);
+                if (friendFrame && typeof friendFrame.openLogContactModalById === 'function') {
+                    friendFrame.openLogContactModalById(friendId, friendName, friendIndex);
+                } else if (friendFrame && typeof friendFrame.openLogContactModal === 'function') {
+                    friendFrame.openLogContactModal(friendIndex);
                 }
             }, 200);
         }
